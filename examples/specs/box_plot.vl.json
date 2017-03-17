@@ -1,61 +1,85 @@
 {
   "$schema": "https://vega.github.io/schema/vega-lite/v2.json",
-  "description": "A box plot showing mean, min, and max in the US population distribution of age groups in 2000.",
+  "description": "A box plot showing lower and upper 1.5*IQR and median in the US population distribution of age groups in 2000.",
   "data": {"url": "data/population.json"},
+  "transform": [{
+    "summarize": [{
+      "aggregate": "q1",
+      "field": "people",
+      "as": "q1_people"
+    },{
+      "aggregate": "q3",
+      "field": "people",
+      "as": "q3_people"
+    },{
+      "aggregate": "median",
+      "field": "people",
+      "as": "median_people"
+    }],
+    "groupby": ["age"]
+  }],
   "layer": [
     {
-      "mark": "rule",
-      "encoding": {
-        "x": {"field": "age","type": "ordinal"},
-        "y": {
-          "aggregate": "min",
-          "field": "people",
-          "type": "quantitative",
-          "axis": {"title": "population"}
-        },
-        "y2": {
-          "aggregate": "max",
-          "field": "people",
-          "type": "quantitative"
+      "transform": {
+        "calculate": [{
+          "expr": "q3_people - q1_people",
+          "as": "iqr_people"
+        },{
+          "expr": "q3_people + 1.5 * iqr_people",
+          "as": "upper-whisker"
+        },{
+          "expr": "q1_people - 1.5 * iqr_people",
+          "as": "lower-whisker"
+        }]
+      },
+      "layer": [
+        {
+          "mark": "rule",
+          "encoding": {
+            "x": {"field": "age","type": "ordinal"},
+            "y": {
+              "field": "upper-whisker", // Q3(people) + 1.5 * (Q3(people)-Q1(people))
+              "type": "quantitative",
+              "axis": {"title": "population"}
+            },
+            "y2": {
+              "field": "lower-whisker",
+              "type": "quantitative"
+            }
+          }
+        },{
+          "mark": "tick",
+          "encoding": {
+            "x": {"field": "age","type": "ordinal"},
+            "y": {
+              "field": "upper-whisker", // Q3(people) + 1.5 * (Q3(people)-Q1(people))
+              "type": "quantitative",
+              "axis": {"title": "population"}
+            }
+          }
+        },{
+          "mark": "tick",
+          "encoding": {
+            "x": {"field": "age","type": "ordinal"},
+            "y": {
+              "field": "lower-whisker",
+              "type": "quantitative",
+              "axis": {"title": "population"}
+            }
+          }
         }
-      }
-    },
-    {
-      "mark": "tick",
-      "encoding": {
-        "x": {"field": "age","type": "ordinal"},
-        "y": {
-          "aggregate": "min",
-          "field": "people",
-          "type": "quantitative"
-        },
-        "size": {"value": 5}
-      }
-    },
-    {
-      "mark": "tick",
-      "encoding": {
-        "x": {"field": "age","type": "ordinal"},
-        "y": {
-          "aggregate": "max",
-          "field": "people",
-          "type": "quantitative"
-        },
-        "size": {"value": 5}
-      }
+      ]
     },
     {
       "mark": "bar",
       "encoding": {
         "x": {"field": "age","type": "ordinal"},
         "y": {
-          "aggregate": "q1",
-          "field": "people",
+          "field": "q1_people",
           "type": "quantitative"
         },
         "y2": {
-          "aggregate": "q3",
-          "field": "people",
+          "field": "q3_people",
           "type": "quantitative"
         },
         "size": {"value": 5}
@@ -66,8 +90,7 @@
       "encoding": {
         "x": {"field": "age","type": "ordinal"},
         "y": {
-          "aggregate": "median",
-          "field": "people",
+          "field": "median_people",
           "type": "quantitative"
         },
         "size": {"value": 5},
