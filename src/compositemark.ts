@@ -4,6 +4,11 @@ import {GenericUnitSpec, LayerSpec} from './spec';
 
 export const ERRORBAR: 'error-bar' = 'error-bar';
 export type ERRORBAR = typeof ERRORBAR;
+// TODO: export BOXPLOT (IQR ticks)
+// export const BOXPLOT: 'boxplot' = 'boxplot';
+// export type BOXPLOT = typeof BOXPLOT;
+export const BOXPLOT_MINMAX: 'boxplot-minmax' = 'boxplot-minmax';
+export type BOXPLOT_MINMAX = typeof BOXPLOT_MINMAX;
 
 export type UnitNormalizer = (spec: GenericUnitSpec<any, any>)=> LayerSpec;
 
@@ -72,3 +77,68 @@ add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
     ]
   };
 });
+
+add(BOXPLOT_MINMAX, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
+  const {mark: _m, encoding: encoding, ...outerSpec} = spec;
+  const {size: _s, ...encodingWithoutSize} = encoding;
+  const {color: _color, ...encodingWithoutSizeColor} = encodingWithoutSize;
+
+  if (!encoding.x2 && !encoding.y2) {
+    throw new Error('Neither x2 or y2 provided');
+  }
+
+  const encodingFieldBox = encoding.x2 ? (encoding.x2 as any).field : (encoding.y2 as any).field;
+  const encodingTypeBox = encoding.x2 ? (encoding.x2 as any).type : (encoding.y2 as any).type;
+  return {
+    ...outerSpec,
+    layer: [
+      {
+        mark: 'rule',
+        encoding: encodingWithoutSizeColor
+      },{ // Lower tick
+        mark: 'tick',
+        encoding: {
+          x: encoding.x,
+          y: encoding.y,
+          size: encoding.size
+        }
+      }, { // Upper tick
+        mark: 'tick',
+        encoding: {
+          x: encoding.x,
+          y: encoding.y2,
+          size: encoding.size
+        }
+      }, { // bar
+        mark: 'bar',
+        encoding: {
+          x: encoding.x,
+          y: {
+            aggregate: 'q1',
+            field: encodingFieldBox,
+            type: encodingTypeBox
+          },
+          y2: {
+            aggregate: 'q3',
+            field: encodingFieldBox,
+            type: encodingTypeBox
+          },
+          size: encoding.size
+        }
+      }, { // median tick
+        mark: 'tick',
+        encoding: {
+          x: encoding.x,
+          y: {
+            aggregate: 'median',
+            field: encodingFieldBox,
+            type: encodingTypeBox
+          },
+          size: encoding.size,
+          color: encoding.color
+        }
+      }
+    ]
+  };
+});
+
