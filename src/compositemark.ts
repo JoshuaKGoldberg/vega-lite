@@ -7,8 +7,8 @@ export type ERRORBAR = typeof ERRORBAR;
 // TODO: export BOXPLOT (IQR ticks)
 // export const BOXPLOT: 'boxplot' = 'boxplot';
 // export type BOXPLOT = typeof BOXPLOT;
-export const BOXPLOT_MINMAX: 'boxplot-minmax' = 'boxplot-minmax';
-export type BOXPLOT_MINMAX = typeof BOXPLOT_MINMAX;
+export const BOX: 'box' = 'box';
+export type BOX = typeof BOX;
 
 export type UnitNormalizer = (spec: GenericUnitSpec<any, any>)=> LayerSpec;
 
@@ -78,7 +78,7 @@ add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
   };
 });
 
-add(BOXPLOT_MINMAX, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
+add(BOX, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
   const {size: _s, ...encodingWithoutSize} = encoding;
   const {color: _color, ...encodingWithoutSizeColor} = encodingWithoutSize;

@@ -95,14 +95,14 @@ describe("normalizeErrorBar", () => {
  });
 
 
-describe("normalizeBoxplot", () => {
+describe("normalizeBox", () => {
   it("should throw error when missing x2 and y2", () => {
       assert.throws(() => {
         normalize({
           "description": "A error bar plot showing mean, min, and max in the US population distribution of age groups in 2000.",
           "data": {"url": "data/population.json"},
           "transform": {"filter": "datum.year == 2000"},
-          mark: "boxplot-minmax",
+          mark: "box",
           encoding: {
             "y": {"field": "age","type": "ordinal"},
             "x": {
@@ -121,7 +121,7 @@ describe("normalizeBoxplot", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "boxplot-minmax",
+        mark: "box",
         encoding: {
           "x": {"field": "age","type": "ordinal"},
           "y": {
