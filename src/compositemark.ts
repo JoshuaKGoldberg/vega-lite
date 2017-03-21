@@ -78,14 +78,10 @@ add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
   };
 });
 
-add(BOX, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
+add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
   const {size: _s, ...encodingWithoutSize} = encoding;
   const {color: _color, ...encodingWithoutSizeColor} = encodingWithoutSize;
-
-  if (!encoding.x2 && !encoding.y2) {
-    throw new Error('Neither x2 or y2 provided');
-  }
 
   const encodingFieldBox = encoding.x2 ? (encoding.x2 as any).field : (encoding.y2 as any).field;
   const encodingTypeBox = encoding.x2 ? (encoding.x2 as any).type : (encoding.y2 as any).type;
