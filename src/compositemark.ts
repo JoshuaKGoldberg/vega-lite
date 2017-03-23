@@ -1,7 +1,7 @@
 import {Encoding} from './encoding';
 import {isMarkDef, MarkDef} from './mark';
 import {GenericUnitSpec, LayerSpec} from './spec';
-import {isDiscrete, isContinuous, PositionFieldDef} from './fielddef';
+import {isContinuous, isDiscrete, PositionFieldDef} from './fielddef';
 
 export const ERRORBAR: 'error-bar' = 'error-bar';
 export type ERRORBAR = typeof ERRORBAR;
@@ -82,6 +82,7 @@ add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
 
 add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
+  const {x: _x, y: _y, ...nonPositionEncoding} = encoding;
 
   let fullEncoding: any = {};
 
@@ -169,21 +170,22 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
         encoding: {
           x: fullEncoding.noAggregate,
           y: fullEncoding.minWithAxis,
-          y2: fullEncoding.max
+          y2: fullEncoding.max,
+          ...nonPositionEncoding
         }
       },{ // Lower tick
         mark: 'tick',
         encoding: {
           x: fullEncoding.noAggregate,
           y: fullEncoding.min,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }, { // Upper tick
         mark: 'tick',
         encoding: {
           x: fullEncoding.noAggregate,
           y: fullEncoding.max,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }, { // lower part of box (q1 to median)
         mark: 'bar',
@@ -191,7 +193,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
           x: fullEncoding.noAggregate,
           y: fullEncoding.q1,
           y2: fullEncoding.median,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }, { // upper part of box (median to q3)
         mark: 'bar',
@@ -199,7 +201,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
           x: fullEncoding.noAggregate,
           y: fullEncoding.median,
           y2: fullEncoding.q3,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }
     ]
@@ -211,21 +213,22 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
         encoding: {
           y: fullEncoding.noAggregate,
           x: fullEncoding.minWithAxis,
-          x2: fullEncoding.max
+          x2: fullEncoding.max,
+          ...nonPositionEncoding
         }
       },{ // Lower tick
         mark: 'tick',
         encoding: {
           y: fullEncoding.noAggregate,
           x: fullEncoding.min,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }, { // Upper tick
         mark: 'tick',
         encoding: {
           y: fullEncoding.noAggregate,
           x: fullEncoding.max,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }, { // lower part of box (q1 to median)
         mark: 'bar',
@@ -233,7 +236,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
           y: fullEncoding.noAggregate,
           x: fullEncoding.q1,
           x2: fullEncoding.median,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }, { // upper part of box (median to q3)
         mark: 'bar',
@@ -241,7 +244,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
           y: fullEncoding.noAggregate,
           x: fullEncoding.median,
           x2: fullEncoding.q3,
-          size: encoding.size
+          ...nonPositionEncoding
         }
       }
     ]
