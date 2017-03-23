@@ -1,7 +1,7 @@
 import {Encoding} from './encoding';
+import {isContinuous, isDiscrete, PositionFieldDef} from './fielddef';
 import {isMarkDef, MarkDef} from './mark';
 import {GenericUnitSpec, LayerSpec} from './spec';
-import {isContinuous, isDiscrete, PositionFieldDef} from './fielddef';
 
 export const ERRORBAR: 'error-bar' = 'error-bar';
 export type ERRORBAR = typeof ERRORBAR;
