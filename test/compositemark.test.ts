@@ -113,7 +113,20 @@ describe("normalizeBox", () => {
           "color": {"value" : "white"}
         }
       });
-    }, Error, 'Need one continuous and one discrete axis');
+    }, Error, 'Need one continuous and one discrete axis for 2D boxplots');
+  });
+
+  it("should produce an error if build 1D boxplot with a discrete axis", () => {
+    assert.throws(() => {
+      normalize({
+        "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
+        "data": {"url": "data/population.json"},
+        mark: "box",
+        encoding: {
+          "x": {"field": "age", "type": "ordinal"}
+        }
+      });
+    }, Error, 'Need a continuous axis for 1D boxplot');
   });
 
   it("should produce an error if both axes are discrete", () => {
@@ -436,5 +449,176 @@ describe("normalizeBox", () => {
       });
   });
 
+  it("should produce correct layered specs for 1D boxplot with only x", () => {
+     assert.deepEqual(normalize({
+        "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
+        "data": {"url": "data/population.json"},
+        mark: "box",
+        encoding: {
+          "x": {
+            "field": "people",
+            "type": "quantitative",
+            "axis": {"title": "population"}
+          }
+        }
+      }), {
+        "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
+        "data": {"url": "data/population.json"},
+        "layer": [
+          {
+            "mark": "rule",
+            "encoding": {
+              "x": {
+                "aggregate": "min",
+                "field": "people",
+                "type": "quantitative",
+                "axis": {"title": "population"}
+              },
+              "x2": {
+                "aggregate": "max",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "tick",
+            "encoding": {
+              "x": {
+                "aggregate": "min",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "tick",
+            "encoding": {
+              "x": {
+                "aggregate": "max",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "bar",
+            "encoding": {
+              "x": {
+                "aggregate": "q1",
+                "field": "people",
+                "type": "quantitative"
+              },
+              "x2": {
+                "aggregate": "median",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "bar",
+            "encoding": {
+              "x": {
+                "aggregate": "median",
+                "field": "people",
+                "type": "quantitative"
+              },
+              "x2": {
+                "aggregate": "q3",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          }
+        ]
+      });
+  });
+
+  it("should produce correct layered specs for 1D boxplot with only y", () => {
+     assert.deepEqual(normalize({
+        "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
+        "data": {"url": "data/population.json"},
+        mark: "box",
+        encoding: {
+          "y": {
+            "field": "people",
+            "type": "quantitative",
+            "axis": {"title": "population"}
+          }
+        }
+      }), {
+        "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
+        "data": {"url": "data/population.json"},
+        "layer": [
+          {
+            "mark": "rule",
+            "encoding": {
+              "y": {
+                "aggregate": "min",
+                "field": "people",
+                "type": "quantitative",
+                "axis": {"title": "population"}
+              },
+              "y2": {
+                "aggregate": "max",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "tick",
+            "encoding": {
+              "y": {
+                "aggregate": "min",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "tick",
+            "encoding": {
+              "y": {
+                "aggregate": "max",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "bar",
+            "encoding": {
+              "y": {
+                "aggregate": "q1",
+                "field": "people",
+                "type": "quantitative"
+              },
+              "y2": {
+                "aggregate": "median",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          },
+          {
+            "mark": "bar",
+            "encoding": {
+              "y": {
+                "aggregate": "median",
+                "field": "people",
+                "type": "quantitative"
+              },
+              "y2": {
+                "aggregate": "q3",
+                "field": "people",
+                "type": "quantitative"
+              }
+            }
+          }
+        ]
+      });
+  });
 
 });

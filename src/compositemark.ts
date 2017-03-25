@@ -81,36 +81,44 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
   const {x: _x, y: _y, ...nonPositionEncoding} = encoding;
 
-  let discreteAxisFieldDef, continuousAxisChannelDef: PositionFieldDef, continuousFieldType;
+  let discreteAxisFieldDef, continuousAxisChannelDef: PositionFieldDef;
   let discreteAxis, continuousAxis;
 
-  if (isDiscrete(encoding.x) && isContinuous(encoding.y)) {
-    // vertical
-    discreteAxis = 'x';
-    continuousAxis = 'y';
-    continuousAxisChannelDef = encoding.y;
-    continuousFieldType = {
-      field: continuousAxisChannelDef.field,
-      type: continuousAxisChannelDef.type
-    };
+  if (encoding.x && encoding.y) {
+    // 2D
+    if (isDiscrete(encoding.x) && isContinuous(encoding.y)) {
+      // vertical
+      discreteAxis = 'x';
+      continuousAxis = 'y';
+      continuousAxisChannelDef = encoding.y;
 
-    discreteAxisFieldDef = encoding.x;
+      discreteAxisFieldDef = encoding.x;
+    } else if (isDiscrete(encoding.y) && isContinuous(encoding.x)) {
+      // horizontal
+      discreteAxis = 'y';
+      continuousAxis = 'x';
+      continuousAxisChannelDef = encoding.x;
 
-  } else if (isDiscrete(encoding.y) && isContinuous(encoding.x)) {
-    // horizontal
-    discreteAxis = 'y';
+      discreteAxisFieldDef = encoding.y;
+    } else {
+      throw new Error('Need one continuous and one discrete axis for 2D boxplots');
+    }
+  } else if (encoding.x && isContinuous(encoding.x) && encoding.y === undefined) {
+    // 1D horizontal
     continuousAxis = 'x';
     continuousAxisChannelDef = encoding.x;
-    continuousFieldType = {
+  } else if (encoding.x === undefined && encoding.y && isContinuous(encoding.y)) {
+    // 1D vertical
+    continuousAxis = 'y';
+    continuousAxisChannelDef = encoding.y;
+  } else {
+    throw new Error('Need a continuous axis for 1D boxplots');
+  }
+
+  const continuousFieldType = {
       field: continuousAxisChannelDef.field,
       type: continuousAxisChannelDef.type
-    };
-
-    discreteAxisFieldDef = encoding.y;
-
-  } else {
-    throw new Error('Need one continuous and one discrete axis');
-  }
+  };
 
   const minFieldDef = {
     aggregate: 'min',
@@ -137,13 +145,15 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
     ...continuousFieldType
   };
 
+  const discreteAxisChannelDef = discreteAxisFieldDef !== undefined ? {[discreteAxis]: discreteAxisFieldDef} : {};
+
   return {
     ...outerSpec,
     layer: [
       {
         mark: 'rule',
         encoding: {
-          [discreteAxis]: discreteAxisFieldDef,
+          ...discreteAxisChannelDef,
           [continuousAxis]: minWithAxisFieldDef,
           [continuousAxis + '2']: maxFieldDef,
           ...nonPositionEncoding
@@ -151,21 +161,21 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
       },{ // Lower tick
         mark: 'tick',
         encoding: {
-          [discreteAxis]: discreteAxisFieldDef,
+          ...discreteAxisChannelDef,
           [continuousAxis]: minFieldDef,
           ...nonPositionEncoding
         }
       }, { // Upper tick
         mark: 'tick',
         encoding: {
-          [discreteAxis]: discreteAxisFieldDef,
+          ...discreteAxisChannelDef,
           [continuousAxis]: maxFieldDef,
           ...nonPositionEncoding
         }
       }, { // lower part of box (q1 to median)
         mark: 'bar',
         encoding: {
-          [discreteAxis]: discreteAxisFieldDef,
+          ...discreteAxisChannelDef,
           [continuousAxis]: q1FieldDef,
           [continuousAxis + '2']: medianFieldDef,
           ...nonPositionEncoding
@@ -173,7 +183,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
       }, { // upper part of box (median to q3)
         mark: 'bar',
         encoding: {
-          [discreteAxis]: discreteAxisFieldDef,
+          ...discreteAxisChannelDef,
           [continuousAxis]: medianFieldDef,
           [continuousAxis + '2']: q3FieldDef,
           ...nonPositionEncoding
