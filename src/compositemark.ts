@@ -5,9 +5,6 @@ import {GenericUnitSpec, LayerSpec} from './spec';
 
 export const ERRORBAR: 'error-bar' = 'error-bar';
 export type ERRORBAR = typeof ERRORBAR;
-// TODO: export BOXPLOT (IQR ticks)
-// export const BOXPLOT: 'boxplot' = 'boxplot';
-// export type BOXPLOT = typeof BOXPLOT;
 export const BOX: 'box' = 'box';
 export type BOX = typeof BOX;
 
@@ -84,166 +81,101 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
   const {x: _x, y: _y, ...nonPositionEncoding} = encoding;
 
-  let fullEncoding: any = {};
-
-  let isVertical: boolean;
+  let discreteAxisFieldDef, continuousAxisChannelDef: PositionFieldDef, continuousFieldType;
+  let discreteAxis, continuousAxis;
 
   if (isDiscrete(encoding.x) && isContinuous(encoding.y)) {
     // vertical
-    isVertical = true;
-    const fieldDefEncodingY: PositionFieldDef = encoding.y;
-    const encodingYWithoutAxis = {
-      field: fieldDefEncodingY.field,
-      type: fieldDefEncodingY.type
+    discreteAxis = 'x';
+    continuousAxis = 'y';
+    continuousAxisChannelDef = encoding.y;
+    continuousFieldType = {
+      field: continuousAxisChannelDef.field,
+      type: continuousAxisChannelDef.type
     };
 
-    fullEncoding.noAggregate = encoding.x;
-    fullEncoding.min = {
-      aggregate: 'min',
-      ...encodingYWithoutAxis
-    };
-    fullEncoding.minWithAxis = {
-      axis: fieldDefEncodingY.axis,
-      ...fullEncoding.min
-    };
-    fullEncoding.q1 = {
-      aggregate: 'q1',
-      ...encodingYWithoutAxis
-    };
-    fullEncoding.median = {
-      aggregate: 'median',
-      ...encodingYWithoutAxis
-    };
-    fullEncoding.q3 = {
-      aggregate: 'q3',
-      ...encodingYWithoutAxis
-    };
-    fullEncoding.max = {
-      aggregate: 'max',
-      ...encodingYWithoutAxis
-    };
-
+    discreteAxisFieldDef = encoding.x;
 
   } else if (isDiscrete(encoding.y) && isContinuous(encoding.x)) {
     // horizontal
-    isVertical = false;
-    const fieldDefEncodingX: PositionFieldDef = encoding.x;
-    const encodingXWithoutAxis = {
-      field: fieldDefEncodingX.field,
-      type: fieldDefEncodingX.type
+    discreteAxis = 'y';
+    continuousAxis = 'x';
+    continuousAxisChannelDef = encoding.x;
+    continuousFieldType = {
+      field: continuousAxisChannelDef.field,
+      type: continuousAxisChannelDef.type
     };
 
-    fullEncoding.noAggregate = encoding.y;
-    fullEncoding.min = {
-      aggregate: 'min',
-      ...encodingXWithoutAxis
-    };
-    fullEncoding.minWithAxis = {
-      axis: fieldDefEncodingX.axis,
-      ...fullEncoding.min
-    };
-    fullEncoding.q1 = {
-      aggregate: 'q1',
-      ...encodingXWithoutAxis
-    };
-    fullEncoding.median = {
-      aggregate: 'median',
-      ...encodingXWithoutAxis
-    };
-    fullEncoding.q3 = {
-      aggregate: 'q3',
-      ...encodingXWithoutAxis
-    };
-    fullEncoding.max = {
-      aggregate: 'max',
-      ...encodingXWithoutAxis
-    };
+    discreteAxisFieldDef = encoding.y;
+
   } else {
     throw new Error('Need one continuous and one discrete axis');
   }
 
-  return isVertical ? {
+  const minFieldDef = {
+    aggregate: 'min',
+    ...continuousFieldType
+  };
+  const minWithAxisFieldDef = {
+    axis: continuousAxisChannelDef.axis,
+    ...minFieldDef
+  };
+  const q1FieldDef = {
+    aggregate: 'q1',
+    ...continuousFieldType
+  };
+  const medianFieldDef = {
+    aggregate: 'median',
+    ...continuousFieldType
+  };
+  const q3FieldDef = {
+    aggregate: 'q3',
+    ...continuousFieldType
+  };
+  const maxFieldDef = {
+    aggregate: 'max',
+    ...continuousFieldType
+  };
+
+  return {
     ...outerSpec,
     layer: [
       {
         mark: 'rule',
         encoding: {
-          x: fullEncoding.noAggregate,
-          y: fullEncoding.minWithAxis,
-          y2: fullEncoding.max,
+          [discreteAxis]: discreteAxisFieldDef,
+          [continuousAxis]: minWithAxisFieldDef,
+          [continuousAxis + '2']: maxFieldDef,
           ...nonPositionEncoding
         }
       },{ // Lower tick
         mark: 'tick',
         encoding: {
-          x: fullEncoding.noAggregate,
-          y: fullEncoding.min,
+          [discreteAxis]: discreteAxisFieldDef,
+          [continuousAxis]: minFieldDef,
           ...nonPositionEncoding
         }
       }, { // Upper tick
         mark: 'tick',
         encoding: {
-          x: fullEncoding.noAggregate,
-          y: fullEncoding.max,
+          [discreteAxis]: discreteAxisFieldDef,
+          [continuousAxis]: maxFieldDef,
           ...nonPositionEncoding
         }
       }, { // lower part of box (q1 to median)
         mark: 'bar',
         encoding: {
-          x: fullEncoding.noAggregate,
-          y: fullEncoding.q1,
-          y2: fullEncoding.median,
+          [discreteAxis]: discreteAxisFieldDef,
+          [continuousAxis]: q1FieldDef,
+          [continuousAxis + '2']: medianFieldDef,
           ...nonPositionEncoding
         }
       }, { // upper part of box (median to q3)
         mark: 'bar',
         encoding: {
-          x: fullEncoding.noAggregate,
-          y: fullEncoding.median,
-          y2: fullEncoding.q3,
-          ...nonPositionEncoding
-        }
-      }
-    ]
-  } : {
-    ...outerSpec,
-    layer: [
-      {
-        mark: 'rule',
-        encoding: {
-          y: fullEncoding.noAggregate,
-          x: fullEncoding.minWithAxis,
-          x2: fullEncoding.max,
-          ...nonPositionEncoding
-        }
-      },{ // Lower tick
-        mark: 'tick',
-        encoding: {
-          y: fullEncoding.noAggregate,
-          x: fullEncoding.min,
-          ...nonPositionEncoding
-        }
-      }, { // Upper tick
-        mark: 'tick',
-        encoding: {
-          y: fullEncoding.noAggregate,
-          x: fullEncoding.max,
-          ...nonPositionEncoding
-        }
-      }, { // lower part of box (q1 to median)
-        mark: 'bar',
-        encoding: {
-          y: fullEncoding.noAggregate,
-          x: fullEncoding.q1,
-          x2: fullEncoding.median,
-          ...nonPositionEncoding
-        }
-      }, { // upper part of box (median to q3)
-        mark: 'bar',
-        encoding: {
-          y: fullEncoding.noAggregate,
-          x: fullEncoding.median,
-          x2: fullEncoding.q3,
+          [discreteAxis]: discreteAxisFieldDef,
+          [continuousAxis]: medianFieldDef,
+          [continuousAxis + '2']: q3FieldDef,
           ...nonPositionEncoding
         }
       }
