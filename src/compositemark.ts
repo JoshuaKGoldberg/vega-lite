@@ -115,14 +115,14 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
     throw new Error('Need a continuous axis for 1D boxplots');
   }
 
-  const continuousFieldType = {
+  const baseContinuousFieldDef = {
       field: continuousAxisChannelDef.field,
       type: continuousAxisChannelDef.type
   };
 
   const minFieldDef = {
     aggregate: 'min',
-    ...continuousFieldType
+    ...baseContinuousFieldDef
   };
   const minWithAxisFieldDef = {
     axis: continuousAxisChannelDef.axis,
@@ -130,22 +130,22 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   };
   const q1FieldDef = {
     aggregate: 'q1',
-    ...continuousFieldType
+    ...baseContinuousFieldDef
   };
   const medianFieldDef = {
     aggregate: 'median',
-    ...continuousFieldType
+    ...baseContinuousFieldDef
   };
   const q3FieldDef = {
     aggregate: 'q3',
-    ...continuousFieldType
+    ...baseContinuousFieldDef
   };
   const maxFieldDef = {
     aggregate: 'max',
-    ...continuousFieldType
+    ...baseContinuousFieldDef
   };
 
-  const discreteAxisChannelDef = discreteAxisFieldDef !== undefined ? {[discreteAxis]: discreteAxisFieldDef} : {};
+  const discreteAxisEncodingMixin = discreteAxisFieldDef !== undefined ? {[discreteAxis]: discreteAxisFieldDef} : {};
 
   return {
     ...outerSpec,
@@ -153,7 +153,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
       {
         mark: 'rule',
         encoding: {
-          ...discreteAxisChannelDef,
+          ...discreteAxisEncodingMixin,
           [continuousAxis]: minWithAxisFieldDef,
           [continuousAxis + '2']: maxFieldDef,
           ...nonPositionEncoding
@@ -161,21 +161,21 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
       },{ // Lower tick
         mark: 'tick',
         encoding: {
-          ...discreteAxisChannelDef,
+          ...discreteAxisEncodingMixin,
           [continuousAxis]: minFieldDef,
           ...nonPositionEncoding
         }
       }, { // Upper tick
         mark: 'tick',
         encoding: {
-          ...discreteAxisChannelDef,
+          ...discreteAxisEncodingMixin,
           [continuousAxis]: maxFieldDef,
           ...nonPositionEncoding
         }
       }, { // lower part of box (q1 to median)
         mark: 'bar',
         encoding: {
-          ...discreteAxisChannelDef,
+          ...discreteAxisEncodingMixin,
           [continuousAxis]: q1FieldDef,
           [continuousAxis + '2']: medianFieldDef,
           ...nonPositionEncoding
@@ -183,7 +183,7 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
       }, { // upper part of box (median to q3)
         mark: 'bar',
         encoding: {
-          ...discreteAxisChannelDef,
+          ...discreteAxisEncodingMixin,
           [continuousAxis]: medianFieldDef,
           [continuousAxis + '2']: q3FieldDef,
           ...nonPositionEncoding
