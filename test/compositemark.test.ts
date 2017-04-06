@@ -110,7 +110,7 @@ describe("normalizeBox", () => {
             "axis": {"title": "population"}
           },
           "size": {"value": 5},
-          "color": {"value" : "white"}
+          "color": {"value" : "skyblue"}
         }
       });
     }, Error, 'Need one continuous and one discrete axis for 2D boxplots');
@@ -143,13 +143,13 @@ describe("normalizeBox", () => {
             "axis": {"title": "age"}
           },
           "size": {"value": 5},
-          "color": {"value" : "white"}
+          "color": {"value" : "skyblue"}
         }
       });
     }, Error, 'Need one continuous and one discrete axis');
   });
 
-  it("should produce correct layered specs for vertical boxplot with min and max lower and upper ticks", () => {
+  it("should produce correct layered specs for vertical boxplot with min and max", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
@@ -162,7 +162,7 @@ describe("normalizeBox", () => {
             "axis": {"title": "population"}
           },
           "size": {"value": 5},
-          "color": {"value" : "white"}
+          "color": {"value" : "skyblue"}
         }
       }), {
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
@@ -179,38 +179,26 @@ describe("normalizeBox", () => {
                 "axis": {"title": "population"}
               },
               "y2": {
-                "aggregate": "max",
+                "aggregate": "q1",
                 "field": "people",
                 "type": "quantitative"
-              },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
+              }
             }
           },
           {
-            "mark": "tick",
+            "mark": "rule",
             "encoding": {
               "x": {"field": "age","type": "ordinal"},
               "y": {
-                "aggregate": "min",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
-            }
-          },
-          {
-            "mark": "tick",
-            "encoding": {
-              "x": {"field": "age","type": "ordinal"},
-              "y": {
+              "y2": {
                 "aggregate": "max",
                 "field": "people",
                 "type": "quantitative"
-              },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
+              }
             }
           },
           {
@@ -223,16 +211,16 @@ describe("normalizeBox", () => {
                 "type": "quantitative"
               },
               "y2": {
-                "aggregate": "median",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               },
               "size": {"value": 5},
-              "color": {"value" : "white"}
+              "color": {"value" : "skyblue"}
             }
           },
           {
-            "mark": "bar",
+            "mark": "tick",
             "encoding": {
               "x": {"field": "age","type": "ordinal"},
               "y": {
@@ -240,20 +228,15 @@ describe("normalizeBox", () => {
                 "field": "people",
                 "type": "quantitative"
               },
-              "y2": {
-                "aggregate": "q3",
-                "field": "people",
-                "type": "quantitative"
-              },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
+              "color": {"value" : "white"},
+              "size": {"value": 5}
             }
           }
         ]
       });
   });
 
-  it("should produce correct layered specs for horizontal boxplot with min and max lower and upper ticks", () => {
+  it("should produce correct layered specs for horizontal boxplot with min and max", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
@@ -266,7 +249,7 @@ describe("normalizeBox", () => {
             "axis": {"title": "population"}
           },
           "size": {"value": 5},
-          "color": {"value" : "white"}
+          "color": {"value" : "skyblue"}
         }
       }), {
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
@@ -283,38 +266,26 @@ describe("normalizeBox", () => {
                 "axis": {"title": "population"}
               },
               "x2": {
-                "aggregate": "max",
+                "aggregate": "q1",
                 "field": "people",
                 "type": "quantitative"
-              },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
+              }
             }
           },
           {
-            "mark": "tick",
+            "mark": "rule",
             "encoding": {
               "y": {"field": "age","type": "ordinal"},
               "x": {
-                "aggregate": "min",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
-            }
-          },
-          {
-            "mark": "tick",
-            "encoding": {
-              "y": {"field": "age","type": "ordinal"},
-              "x": {
+              "x2": {
                 "aggregate": "max",
                 "field": "people",
                 "type": "quantitative"
-              },
-              "size": {"value": 5},
-              "color": {"value" : "white"}
+              }
             }
           },
           {
@@ -327,25 +298,20 @@ describe("normalizeBox", () => {
                 "type": "quantitative"
               },
               "x2": {
-                "aggregate": "median",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               },
               "size": {"value": 5},
-              "color": {"value" : "white"}
+              "color": {"value" : "skyblue"}
             }
           },
           {
-            "mark": "bar",
+            "mark": "tick",
             "encoding": {
               "y": {"field": "age","type": "ordinal"},
               "x": {
                 "aggregate": "median",
-                "field": "people",
-                "type": "quantitative"
-              },
-              "x2": {
-                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               },
@@ -357,7 +323,7 @@ describe("normalizeBox", () => {
       });
   });
 
-  it("should produce correct layered specs for horizontal with no nonpositional encoding properties boxplot with min and max lower and upper ticks", () => {
+  it("should produce correct layered specs for horizontal with no nonpositional encoding properties boxplot with min and max", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
@@ -385,28 +351,22 @@ describe("normalizeBox", () => {
                 "axis": {"title": "population"}
               },
               "x2": {
-                "aggregate": "max",
+                "aggregate": "q1",
                 "field": "people",
                 "type": "quantitative"
               }
             }
           },
           {
-            "mark": "tick",
+            "mark": "rule",
             "encoding": {
               "y": {"field": "age","type": "ordinal"},
               "x": {
-                "aggregate": "min",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
-              }
-            }
-          },
-          {
-            "mark": "tick",
-            "encoding": {
-              "y": {"field": "age","type": "ordinal"},
-              "x": {
+              },
+              "x2": {
                 "aggregate": "max",
                 "field": "people",
                 "type": "quantitative"
@@ -423,14 +383,14 @@ describe("normalizeBox", () => {
                 "type": "quantitative"
               },
               "x2": {
-                "aggregate": "median",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               }
             }
           },
           {
-            "mark": "bar",
+            "mark": "tick",
             "encoding": {
               "y": {"field": "age","type": "ordinal"},
               "x": {
@@ -438,11 +398,7 @@ describe("normalizeBox", () => {
                 "field": "people",
                 "type": "quantitative"
               },
-              "x2": {
-                "aggregate": "q3",
-                "field": "people",
-                "type": "quantitative"
-              }
+              "color": {"value" : "white"}
             }
           }
         ]
@@ -475,26 +431,21 @@ describe("normalizeBox", () => {
                 "axis": {"title": "population"}
               },
               "x2": {
-                "aggregate": "max",
+                "aggregate": "q1",
                 "field": "people",
                 "type": "quantitative"
               }
             }
           },
           {
-            "mark": "tick",
+            "mark": "rule",
             "encoding": {
               "x": {
-                "aggregate": "min",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
-              }
-            }
-          },
-          {
-            "mark": "tick",
-            "encoding": {
-              "x": {
+              },
+              "x2": {
                 "aggregate": "max",
                 "field": "people",
                 "type": "quantitative"
@@ -510,25 +461,21 @@ describe("normalizeBox", () => {
                 "type": "quantitative"
               },
               "x2": {
-                "aggregate": "median",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               }
             }
           },
           {
-            "mark": "bar",
+            "mark": "tick",
             "encoding": {
               "x": {
                 "aggregate": "median",
                 "field": "people",
                 "type": "quantitative"
               },
-              "x2": {
-                "aggregate": "q3",
-                "field": "people",
-                "type": "quantitative"
-              }
+              "color": {"value": "white"}
             }
           }
         ]
@@ -561,26 +508,21 @@ describe("normalizeBox", () => {
                 "axis": {"title": "population"}
               },
               "y2": {
-                "aggregate": "max",
+                "aggregate": "q1",
                 "field": "people",
                 "type": "quantitative"
               }
             }
           },
           {
-            "mark": "tick",
+            "mark": "rule",
             "encoding": {
               "y": {
-                "aggregate": "min",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
-              }
-            }
-          },
-          {
-            "mark": "tick",
-            "encoding": {
-              "y": {
+              },
+              "y2": {
                 "aggregate": "max",
                 "field": "people",
                 "type": "quantitative"
@@ -596,25 +538,21 @@ describe("normalizeBox", () => {
                 "type": "quantitative"
               },
               "y2": {
-                "aggregate": "median",
+                "aggregate": "q3",
                 "field": "people",
                 "type": "quantitative"
               }
             }
           },
           {
-            "mark": "bar",
+            "mark": "tick",
             "encoding": {
               "y": {
                 "aggregate": "median",
                 "field": "people",
                 "type": "quantitative"
               },
-              "y2": {
-                "aggregate": "q3",
-                "field": "people",
-                "type": "quantitative"
-              }
+              "color": {"value": "white"}
             }
           }
         ]

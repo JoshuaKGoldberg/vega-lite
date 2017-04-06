@@ -11,6 +11,8 @@
       "axis": {"title": "population"}
     },
     "size": {"value": 5},
-    "color": {"value" : "white"}
+    "color": {"value" : "skyblue"}
   }
 }
+
+

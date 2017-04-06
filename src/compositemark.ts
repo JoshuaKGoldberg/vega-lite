@@ -80,6 +80,8 @@ add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
 add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
   const {x: _x, y: _y, ...nonPositionEncoding} = encoding;
+  const {color: _color, size: size, ...nonPositionEncodingWithoutColorSize} = nonPositionEncoding;
+  const midTickSizeChannelDef = size ? {size: size} : {};
 
   let discreteAxisFieldDef, continuousAxisChannelDef: PositionFieldDef;
   let discreteAxis, continuousAxis;
@@ -150,43 +152,38 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   return {
     ...outerSpec,
     layer: [
-      {
+      { // lower whisker
         mark: 'rule',
         encoding: {
           ...discreteAxisEncodingMixin,
           [continuousAxis]: minWithAxisFieldDef,
+          [continuousAxis + '2']: q1FieldDef,
+          ...nonPositionEncodingWithoutColorSize
+        }
+      }, { // upper whisker
+        mark: 'rule',
+        encoding: {
+          ...discreteAxisEncodingMixin,
+          [continuousAxis]: q3FieldDef,
           [continuousAxis + '2']: maxFieldDef,
-          ...nonPositionEncoding
+          ...nonPositionEncodingWithoutColorSize
         }
-      },{ // Lower tick
-        mark: 'tick',
-        encoding: {
-          ...discreteAxisEncodingMixin,
-          [continuousAxis]: minFieldDef,
-          ...nonPositionEncoding
-        }
-      }, { // Upper tick
-        mark: 'tick',
-        encoding: {
-          ...discreteAxisEncodingMixin,
-          [continuousAxis]: maxFieldDef,
-          ...nonPositionEncoding
-        }
-      }, { // lower part of box (q1 to median)
+      }, { // box (q1 to q3)
         mark: 'bar',
         encoding: {
           ...discreteAxisEncodingMixin,
           [continuousAxis]: q1FieldDef,
-          [continuousAxis + '2']: medianFieldDef,
+          [continuousAxis + '2']: q3FieldDef,
           ...nonPositionEncoding
         }
-      }, { // upper part of box (median to q3)
-        mark: 'bar',
+      }, { // mid tick
+        mark: 'tick',
         encoding: {
           ...discreteAxisEncodingMixin,
           [continuousAxis]: medianFieldDef,
-          [continuousAxis + '2']: q3FieldDef,
-          ...nonPositionEncoding
+          ...nonPositionEncoding,
+          ...midTickSizeChannelDef,
+          'color': {'value' : 'white'}
         }
       }
     ]
