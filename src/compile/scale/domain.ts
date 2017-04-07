@@ -3,7 +3,6 @@ import * as log from '../../log';
 import {SHARED_DOMAIN_OPS} from '../../aggregate';
 import {binToString} from '../../bin';
 import {Channel} from '../../channel';
-import {SOURCE} from '../../data';
 import {DateTime, isDateTime, timestamp} from '../../datetime';
 import {FieldDef} from '../../fielddef';
 import {Domain, hasDiscreteDomain, isBinScale, Scale, ScaleConfig, ScaleType} from '../../scale';
@@ -20,7 +19,9 @@ import {
   VgDomain,
   VgSortField
 } from '../../vega.schema';
+
 import {Model} from '../model';
+import { MAIN, RAW } from '../../data';
 
 export function initDomain(domain: Domain, fieldDef: FieldDef, scale: ScaleType, scaleConfig: ScaleConfig) {
   if (domain === 'unaggregated') {
@@ -73,14 +74,13 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
     return scale.domain;
   }
 
-  // For stack, use STACKED data.
   const stack = model.stack;
   if (stack && channel === stack.fieldChannel) {
     if(stack.offset === 'normalize') {
       return [0, 1];
     }
     return {
-      data: model.dataName('stacked'),
+      data: MAIN,
       fields: [
         model.field(channel, {suffix: 'start'}),
         model.field(channel, {suffix: 'end'})
@@ -92,7 +92,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
 
   if (scale.domain === 'unaggregated') {
     return {
-      data: model.dataTable(),
+      data: MAIN,
       fields: [
         model.field(channel, {aggregate: 'min'}),
         model.field(channel, {aggregate: 'max'})
@@ -108,7 +108,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       // ordinal bin scale takes domain from bin_range, ordered by bin_start
       // This is useful for both axis-based scale (x, y, column, and row) and legend-based scale (other channels).
       return {
-        data: model.dataTable(),
+        data: MAIN,
         field: model.field(channel, {binSuffix: 'range'}),
         sort: {
           field: model.field(channel, {binSuffix: 'start'}),
@@ -119,7 +119,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       if (channel === 'x' || channel === 'y') {
         // X/Y position have to include start and end for non-ordinal scale
         return {
-          data: model.dataTable(),
+          data: MAIN,
           fields: [
             model.field(channel, {binSuffix: 'start'}),
             model.field(channel, {binSuffix: 'end'})
@@ -128,22 +128,29 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       } else {
         // TODO: use bin_mid
         return {
-          data: model.dataTable(),
+          data: MAIN,
           field: model.field(channel, {binSuffix: 'start'})
         };
       }
     }
   } else if (sort) { // have sort -- only for ordinal
+
+    // If sort by aggregation of a specified sort field, we need to use RAW table,
+    // so we can aggregate values for the scale independently from the main aggregation.
+    const needsRaw = !util.isBoolean(sort);
+
+    if (needsRaw) {
+      model.component.data.raw.setRequired();
+    }
+
     return {
-      // If sort by aggregation of a specified sort field, we need to use SOURCE table,
-      // so we can aggregate values for the scale independently from the main aggregation.
-      data: util.isBoolean(sort) ? model.dataTable(): SOURCE,
+      data: needsRaw ? RAW : MAIN,
       field: model.field(channel),
       sort: sort
     };
   } else {
     return {
-      data: model.dataTable(),
+      data: MAIN,
       field: model.field(channel),
     };
   }

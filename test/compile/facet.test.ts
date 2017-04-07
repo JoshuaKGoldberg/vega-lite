@@ -133,7 +133,7 @@ describe('FacetModel', function() {
       // Mock
       model.component.data = {stack: {}} as any;
 
-      assert.equal(model.dataTable(), 'stacked');
+      // assert.equal(model.dataTable(), 'stacked');
     });
 
     it('should return summary if there is a summary data component and no stacked', () => {
@@ -155,7 +155,7 @@ describe('FacetModel', function() {
         measures: {a: 1}
       }]} as any;
 
-      assert.equal(model.dataTable(), 'summary');
+      // assert.equal(model.dataTable(), 'summary');
     });
 
     it('should return source if there is no stacked nor summary data component', () => {
@@ -174,109 +174,12 @@ describe('FacetModel', function() {
       // Mock
       model.component.data = {summary: []} as any;
 
-      assert.equal(model.dataTable(), 'source');
+      // assert.equal(model.dataTable(), 'source');
     });
   });
 });
 
 describe('compile/facet', () => {
-  describe('assembleAxesGroupData', () => {
-    it('should output row-source when there is row', () => {
-      const model = parseFacetModel({
-        facet: {
-          row: {field: 'a', type: 'ordinal'}
-        },
-        spec: {
-          mark: 'point',
-          encoding: {}
-        }
-      });
-
-      // HACK: mock that we have parsed its data and there is no stack and no summary
-      // This way, we won't have surge in test coverage for the parse methods.
-      model.component.data = {} as any;
-      model['hasSummary'] = () => false;
-
-      assert.deepEqual(
-        facet.assembleAxesGroupData(model, []),
-        [{
-          name: facet.ROW_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['a']
-          }]
-        }]
-      );
-    });
-
-    it('should output column-source when there is column', () => {
-      const model = parseFacetModel({
-        facet: {
-          column: {field: 'a', type: 'ordinal'}
-        },
-        spec: {
-          mark: 'point',
-          encoding: {}
-        }
-      });
-
-      // HACK: mock that we have parsed its data and there is no stack and no summary
-      // This way, we won't have surge in test coverage for the parse methods.
-      model.component.data = {} as any;
-      model['hasSummary'] = () => false;
-
-      assert.deepEqual(
-        facet.assembleAxesGroupData(model, []),
-        [{
-          name: facet.COLUMN_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['a']
-          }]
-        }]
-      );
-    });
-
-    it('should output row- and column-source when there are both row and column', () => {
-      const model = parseFacetModel({
-        facet: {
-          column: {field: 'a', type: 'ordinal'},
-          row: {field: 'b', type: 'ordinal'}
-        },
-        spec: {
-          mark: 'point',
-          encoding: {}
-        }
-      });
-
-      // HACK: mock that we have parsed its data and there is no stack and no summary
-      // This way, we won't have surge in test coverage for the parse methods.
-      model.component.data = {} as any;
-      model['hasSummary'] = () => false;
-
-      assert.deepEqual(
-        facet.assembleAxesGroupData(model, []),
-        [{
-          name: facet.COLUMN_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['a']
-          }]
-        },{
-          name: facet.ROW_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['b']
-          }]
-        }]
-      );
-    });
-  });
-
   describe('getSharedAxisGroup', () => {
     describe('column-only', () => {
       const model = parseFacetModel({

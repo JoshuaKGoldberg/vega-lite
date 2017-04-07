@@ -72,7 +72,7 @@ function assemble(model: Model, topLevelProperties: TopLevelProperties) {
       ].concat(assembleTopLevelSignals(model))
     },{
       data: [].concat(
-        model.assembleData([]),
+        model.assembleData(),
         model.assembleLayout([]),
         model.assembleSelectionData([])
       ),
@@ -93,7 +93,7 @@ export function assembleRootGroup(model: Model) {
     },
     model.description ? {description: model.description} : {},
     {
-      from: {data: model.getName(LAYOUT +'')},
+      from: {data: model.dataName(LAYOUT)},
       encode: {
         update: extend(
           {

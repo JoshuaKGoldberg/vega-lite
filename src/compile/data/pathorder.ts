@@ -1,24 +1,27 @@
-import * as stringify from 'json-stable-stringify';
 
-import {DataComponentCompiler} from './base';
 
 import {isAggregate} from '../../encoding';
 import {field} from '../../fielddef';
 import {isSortField} from '../../sort';
 import {contains} from '../../util';
-import {VgSort} from '../../vega.schema';
 
-import {sortParams} from '../common';
-import {FacetModel} from '../facet';
-import {LayerModel} from '../layer';
+ import {sortParams} from '../common';
 import {UnitModel} from '../unit';
+import {DataFlowNode} from './dataflow';
 
-export const pathOrder: DataComponentCompiler<VgSort> = {
-  parseUnit: function(model: UnitModel): VgSort {
+export class OrderNode extends DataFlowNode {
+  private field: string | string[];
+  private order: string | string[];
+
+  constructor(model: UnitModel) {
+    super();
+
     if (contains(['line', 'area'], model.mark())) {
       if (model.mark() === 'line' && model.channelHasField('order')) {
         // For only line, sort by the order field if it is specified.
-        return sortParams(model.encoding.order);
+        const {field, order} = sortParams(model.encoding.order);
+        this.field = field;
+        this.order = order;
       } else {
         // For both line and area, we sort values based on dimension by default
         const dimensionChannel: 'x' | 'y' = model.markDef.orient === 'horizontal' ? 'y' : 'x';
@@ -32,64 +35,19 @@ export const pathOrder: DataComponentCompiler<VgSort> = {
           }) :
           model.field(dimensionChannel, {binSuffix: 'start'});
 
-        return {
-          field: sortField,
-          order: 'descending'
-        };
-      }
-
-    }
-    return null;
-  },
-
-  parseFacet: function(model: FacetModel) {
-    const childDataComponent = model.child.component.data;
-
-    // If child doesn't have its own data source, then consider merging
-    if (!childDataComponent.source) {
-      // For now, let's assume it always has union scale
-      const pathOrderComponent = childDataComponent.pathOrder;
-      delete childDataComponent.pathOrder;
-      return pathOrderComponent;
-    }
-    return null;
-  },
-
-  parseLayer: function(model: LayerModel) {
-    // note that we run this before source.parseLayer
-    let pathOrderComponent: VgSort = null;
-    let stringifiedPathOrder: string = null;
-
-    for (const child of model.children) {
-      const childDataComponent = child.component.data;
-      if (model.compatibleSource(child) && childDataComponent.pathOrder !== null) {
-        if (pathOrderComponent === null) {
-          pathOrderComponent = childDataComponent.pathOrder;
-          stringifiedPathOrder = stringify(pathOrderComponent);
-        } else if (stringifiedPathOrder !== stringify(childDataComponent.pathOrder)) {
-          pathOrderComponent = null;
-          break;
-        }
+        this.field = sortField;
+        this.order = 'descending';
       }
     }
+  }
 
-    if (pathOrderComponent !== null) {
-      // If we merge pathOrderComponent, remove them from children.
-      for (const child of model.children) {
-        delete child.component.data.pathOrder;
-      }
-    }
-
-    return pathOrderComponent;
-  },
-
-  assemble: function(pathOrderComponent: VgSort) {
-    if (pathOrderComponent) {
+  public assemble() {
       return {
         type: 'collect',
-        sort: pathOrderComponent
+        sort: {
+          field: this.field,
+          order: this.order
+        }
       };
-    }
-    return null;
   }
-};
+}

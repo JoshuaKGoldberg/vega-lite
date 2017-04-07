@@ -1,6 +1,6 @@
 
 import {Channel, COLUMN, ROW, X, Y} from '../channel';
-import {LAYOUT} from '../data';
+import {LAYOUT, MAIN} from '../data';
 import {hasDiscreteDomain} from '../scale';
 import {extend, keys, StringSet} from '../util';
 import {VgData, VgFormulaTransform, VgTransform} from '../vega.schema';
@@ -49,7 +49,7 @@ export function assembleLayout(model: Model, layoutData: VgData[]): VgData[] {
     return [
       distinctFields.length > 0 ? {
         name: model.dataName(LAYOUT),
-        source: model.dataTable(),
+        source: model.dataName(MAIN),
         transform: [{
           type: 'aggregate',
           fields: distinctFields,

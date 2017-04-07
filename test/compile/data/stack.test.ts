@@ -2,12 +2,18 @@
 
 import {assert} from 'chai';
 
-import {DataComponent} from '../../../src/compile/data/data';
-import {stack} from '../../../src/compile/data/stack';
+import {StackNode} from '../../../src/compile/data/stack';
 
-import {UnitSpec} from '../../../src/spec';
-import {parseFacetModel, parseUnitModel} from '../../util';
-import {mockDataComponent} from './datatestutil';
+import {UnitModel} from '../../../src/compile/unit';
+import {parseUnitModel} from '../../util';
+
+function parse(model: UnitModel) {
+  return new StackNode(model).stack;
+}
+
+function assemble(model: UnitModel) {
+  return new StackNode(model).assemble;
+}
 
 describe('compile/data/stack', () => {
   describe('parseUnit', () => {
@@ -17,8 +23,7 @@ describe('compile/data/stack', () => {
         "encoding": {}
       });
 
-      const stackComponent = stack.parseUnit(model);
-      assert.equal(stackComponent, undefined);
+      assert.equal(parse(model), undefined);
     });
   });
 
@@ -32,8 +37,7 @@ describe('compile/data/stack', () => {
       }
     });
 
-    const stackComponent = stack.parseUnit(model);
-    assert.deepEqual(stackComponent, {
+    assert.deepEqual(parse(model), {
       name: 'stacked',
       source: 'summary',
       groupby: ['b'],
@@ -58,8 +62,7 @@ describe('compile/data/stack', () => {
       }
     });
 
-    const stackComponent = stack.parseUnit(model);
-    assert.deepEqual(stackComponent, {
+    assert.deepEqual(parse(model), {
       name: 'stacked',
       source: 'summary',
       groupby: ["bin_maxbins_10_b_start", "bin_maxbins_10_b_end"],
@@ -82,11 +85,8 @@ describe('compile/data/stack', () => {
         "color": {"field": "c", "type": "ordinal",}
       }
     });
-    model.component.data = {} as DataComponent;
-    model.component.data.stack = stack.parseUnit(model);
 
-    const stackComponent = model.component.data.stack;
-    assert.deepEqual(stackComponent, {
+    assert.deepEqual(parse(model), {
       name: 'stacked',
       source: 'summary',
       groupby: [],
@@ -99,6 +99,24 @@ describe('compile/data/stack', () => {
       offset: 'zero',
       impute: false
     });
+
+    assert.deepEqual(assemble(model), {
+        name: 'stacked',
+        source: 'summary',
+        transform: [
+          {
+            type: 'stack',
+            groupby: ['bin_b_start'],
+            field: 'sum_a',
+            sort: {
+              field: ['mean_d'],
+              order: ['ascending']
+            },
+            as: ['sum_a_start', 'sum_a_end'],
+            offset: 'zero'
+          }
+        ]
+      });
   });
 
   it('should produce correct stack component for area with color and order', function() {
@@ -112,8 +130,7 @@ describe('compile/data/stack', () => {
       }
     });
 
-    const stackComponent = stack.parseUnit(model);
-    assert.deepEqual(stackComponent, {
+    assert.deepEqual(parse(model), {
       name: 'stacked',
       source: 'summary',
       groupby: ['b'],
@@ -126,200 +143,31 @@ describe('compile/data/stack', () => {
       offset: 'zero',
       impute: true
     });
-  });
 
-  describe('parseLayer', function() {
-    // TODO: write test
-  });
-
-  describe('parseFacet', function() {
-    it('should produce correct stack component for trellis colored bar', function() {
-      const model = parseFacetModel({
-        facet: {
-          row: {"field": "d", "type": "nominal"}
+    assert.deepEqual(assemble(model), {
+      name: 'stacked',
+      source: 'summary',
+      transform: [
+        {
+          type: 'impute',
+          field: 'sum_a',
+          groupby: ['c'],
+          orderby: ['bin_b_start'],
+          method: "value",
+          value: 0
         },
-        spec: {
-          "mark": "bar",
-          "encoding": {
-            "x": {"aggregate": "sum", "field": "a", "type": "quantitative"},
-            "y": {"field": "b", "type": "nominal"},
-            "color": {"field": "c", "type": "nominal"}
-          }
-        }
-      });
-      const child = model.child;
-      child.component.data = mockDataComponent();
-      child.component.data.stack = {
-        name: 'stacked',
-        source: 'summary',
-        groupby: ['b'],
-        field: 'sum_a',
-        stackby: ['c'],
-        sort: {
-          field: ['c'],
-          order: ['descending']
-        },
-        offset: 'zero',
-        impute: true
-      };
-
-      const stackComponent = stack.parseFacet(model);
-      assert.deepEqual(stackComponent, {
-        name: 'stacked',
-        source: 'summary',
-        groupby: ['b', 'd'],
-        field: 'sum_a',
-        stackby: ['c'],
-        sort: {
-          field: ['c'],
-          order: ['descending']
-        },
-        offset: 'zero',
-        impute: true
-      });
-    });
-
-    it('should produce correct stack component for trellis colored bar with faceted y', function() {
-      const model = parseFacetModel({
-        facet: {
-          row: {"field": "b", "type": "nominal"}
-        },
-        spec: {
-          "mark": "bar",
-          "encoding": {
-            "x": {"aggregate": "sum", "field": "a", "type": "quantitative"},
-            "y": {"field": "b", "type": "nominal"},
-            "color": {"field": "c", "type": "nominal"}
-          }
-        }
-      });
-      const child = model.child;
-      child.component.data = mockDataComponent();
-      child.component.data.stack = {
-        name: 'stacked',
-        source: 'summary',
-        groupby: ['b'],
-        field: 'sum_a',
-        stackby: ['c'],
-        sort: {
-          field: ['c'],
-          order: ['descending']
-        },
-        offset: 'zero',
-        impute: true
-      };
-
-      const stackComponent = stack.parseFacet(model);
-      assert.deepEqual(stackComponent, {
-        name: 'stacked',
-        source: 'summary',
-        groupby: ['b'], // no duplicate
-        field: 'sum_a',
-        stackby: ['c'],
-        sort: {
-          field: ['c'],
-          order: ['descending']
-        },
-        offset: 'zero',
-        impute: true
-      });
-    });
-
-    it('should produce correct stack component for trellis non-stacked bar', function() {
-      const model = parseFacetModel({
-        facet: {
-          row: {"field": "d", "type": "nominal"}
-        },
-        spec: {
-          "mark": "bar",
-          "encoding": {
-            "x": {"aggregate": "sum", "field": "a", "type": "quantitative"},
-            "y": {"field": "b", "type": "nominal"}
-          }
-        }
-      });
-      const child = model.child;
-      child.component.data = mockDataComponent();
-      child.component.data.stack = undefined;
-
-      const stackComponent = stack.parseFacet(model);
-      assert.equal(stackComponent, undefined);
-    });
-  });
-
-  describe('assemble', function() {
-    it('should assemble correct imputed stack data source', () => {
-      const stackData = stack.assemble({
-        name: 'stacked',
-        source: 'summary',
-        groupby: ['bin_b_start'],
-        field: 'sum_a',
-        stackby: ['c'],
-        sort: {
-          field: ['mean_d'],
-          order: ['ascending']
-        },
-        offset: 'zero',
-        impute: true
-      });
-      assert.deepEqual(stackData, {
-        name: 'stacked',
-        source: 'summary',
-        transform: [
-          {
-            type: 'impute',
-            field: 'sum_a',
-            groupby: ['c'],
-            orderby: ['bin_b_start'],
-            method: "value",
-            value: 0
+        {
+          type: 'stack',
+          groupby: ['bin_b_start'],
+          field: 'sum_a',
+          sort: {
+            field: ['mean_d'],
+            order: ['ascending']
           },
-          {
-            type: 'stack',
-            groupby: ['bin_b_start'],
-            field: 'sum_a',
-            sort: {
-              field: ['mean_d'],
-              order: ['ascending']
-            },
-            as: ['sum_a_start', 'sum_a_end'],
-            offset: 'zero'
-          }
-        ]
-      });
-    });
-
-    it('should assemble correct unimputed stack data source', () => {
-      const stackData = stack.assemble({
-        name: 'stacked',
-        source: 'summary',
-        groupby: ['bin_b_start'],
-        field: 'sum_a',
-        stackby: ['c'],
-        sort: {
-          field: ['mean_d'],
-          order: ['ascending']
-        },
-        offset: 'zero',
-        impute: false
-      });
-      assert.deepEqual(stackData, {
-        name: 'stacked',
-        source: 'summary',
-        transform: [
-          {
-            type: 'stack',
-            groupby: ['bin_b_start'],
-            field: 'sum_a',
-            sort: {
-              field: ['mean_d'],
-              order: ['ascending']
-            },
-            as: ['sum_a_start', 'sum_a_end'],
-            offset: 'zero'
-          }
-        ]
-      });
+          as: ['sum_a_start', 'sum_a_end'],
+          offset: 'zero'
+        }
+      ]
     });
   });
 });

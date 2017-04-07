@@ -1,15 +1,11 @@
-import {DataComponentCompiler} from './base';
-
-import {Bin, binToString} from '../../bin';
+import { autoMaxBins, Bin, binToString } from '../../bin';
 import {Channel} from '../../channel';
 import {field, FieldDef} from '../../fielddef';
 import {hasDiscreteDomain} from '../../scale';
-import {Dict, extend, flatten, isBoolean, vals, varName} from '../../util';
+import {Dict, extend, flatten, hash, isBoolean, vals, varName} from '../../util';
 import {VgBinTransform, VgTransform} from '../../vega.schema';
-
-import {FacetModel} from './../facet';
-import {LayerModel} from './../layer';
 import {Model} from './../model';
+import {DataFlowNode} from './dataflow';
 
 
 function numberFormatExpr(expr: string, format: string) {
@@ -34,77 +30,60 @@ function addRangeFormula(model: Model, transform: VgTransform[], fieldDef: Field
     }
 }
 
-function parse(model: Model): Dict<VgTransform[]> {
-  return model.reduceFieldDef(function(binComponent: Dict<VgTransform[]>, fieldDef: FieldDef, channel: Channel) {
-    const fieldDefBin = model.fieldDef(channel).bin;
-    if (fieldDefBin) {
-      const bin: Bin = isBoolean(fieldDefBin) ? {} : fieldDefBin;
-      const key = `${binToString(fieldDef.bin)}_${fieldDef.field}`;
-      let transform: VgTransform[] = binComponent[key];
-      if (!transform) {
-        binComponent[key] = transform = [];
-        const extentSignal = model.getName(key + '_extent');
+export class BinNode extends DataFlowNode {
+  private bins: Dict<VgTransform[]>;
 
-        const binTrans: VgBinTransform = {
-            type: 'bin',
-            field: fieldDef.field,
-            as: [field(fieldDef, {binSuffix: 'start'}), field(fieldDef, {binSuffix: 'end'})],
-            signal: varName(model.getName(key + '_bins')),
-            ...bin
-        };
-        if (!bin.extent) {
-          transform.push({
-            type: 'extent',
-            field: fieldDef.field,
-            signal: extentSignal
-          });
-          binTrans.extent = {signal: extentSignal};
+  constructor(model: Model) {
+    super();
+
+    this.bins = model.reduceFieldDef(function(binComponent: Dict<VgTransform[]>, fieldDef: FieldDef, channel: Channel) {
+      const fieldDefBin = model.fieldDef(channel).bin;
+      if (fieldDefBin) {
+        const bin: Bin = isBoolean(fieldDefBin) ? {} : fieldDefBin;
+        const key = `${binToString(fieldDef.bin)}_${fieldDef.field}`;
+
+        let transform: VgTransform[] = binComponent[key];
+
+        if (!transform) {
+          binComponent[key] = transform = [];
+          const extentSignal = model.getName(key + '_extent');
+
+          const binTrans: VgBinTransform = {
+              type: 'bin',
+              field: fieldDef.field,
+              as: [field(fieldDef, {binSuffix: 'start'}), field(fieldDef, {binSuffix: 'end'})],
+              signal: varName(model.getName(key + '_bins')),
+              ...bin
+          };
+          if (!bin.extent) {
+            transform.push({
+              type: 'extent',
+              field: fieldDef.field,
+              signal: extentSignal
+            });
+            binTrans.extent = {signal: extentSignal};
+          }
+          transform.push(binTrans);
         }
-        transform.push(binTrans);
+        // if formula doesn't exist already
+        if (transform.length > 0 && transform[transform.length - 1].type !== 'formula') {
+          addRangeFormula(model, binComponent[key], fieldDef, channel);
+        }
       }
-      // if formula doesn't exist already
-      if (transform.length > 0 && transform[transform.length - 1].type !== 'formula') {
-        addRangeFormula(model, binComponent[key], fieldDef, channel);
-      }
-    }
-    return binComponent;
-  }, {});
-}
-
-export const bin: DataComponentCompiler<Dict<VgTransform[]>> = {
-  parseUnit: parse,
-
-  parseFacet: function(model: FacetModel) {
-    const binComponent = parse(model);
-
-    const childDataComponent = model.child.component.data;
-
-    // If child doesn't have its own data source, then merge
-    if (!childDataComponent.source) {
-      // FIXME: current merging logic can produce redundant transforms when a field is binned for color and for non-color
-      extend(binComponent, childDataComponent.bin);
-      delete childDataComponent.bin;
-    }
-    return binComponent;
-  },
-
-  parseLayer: function (model: LayerModel) {
-    const binComponent = parse(model);
-
-    model.children.forEach((child) => {
-      const childDataComponent = child.component.data;
-
-      // If child doesn't have its own data source, then merge
-      if (!childDataComponent.source) {
-        extend(binComponent, childDataComponent.bin);
-        delete childDataComponent.bin;
-      }
-    });
-
-    return binComponent;
-  },
-
-  assemble: function (component: Dict<VgTransform[]>) {
-    return flatten(vals(component));
+      return binComponent;
+    }, {});
   }
-};
+
+  public size() {
+    return Object.keys(this.bins).length;
+  }
+
+  public merge(other: BinNode) {
+    this.bins = extend(other.bins);
+    other.remove();
+  }
+
+  public assemble(): VgTransform[] {
+    return flatten(vals(this.bins));
+  }
+}

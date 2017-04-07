@@ -1,12 +1,9 @@
-import {DataComponentCompiler} from './base';
-
-import {FieldDef} from '../../fielddef';
+ import {FieldDef} from '../../fielddef';
 import {QUANTITATIVE, TEMPORAL} from '../../type';
-import {contains, Dict, differ, extend, keys} from '../../util';
-
-import {FacetModel} from './../facet';
-import {LayerModel} from './../layer';
+import {contains, Dict, keys} from '../../util';
+import {VgFilterTransform} from '../../vega.schema';
 import {Model} from './../model';
+import {DataFlowNode} from './dataflow';
 
 const DEFAULT_NULL_FILTERS = {
   nominal: false,
@@ -15,59 +12,34 @@ const DEFAULT_NULL_FILTERS = {
   temporal: true
 };
 
-/** Return Hashset of fields for null filtering (key=field, value = true). */
-function parse(model: Model): Dict<FieldDef> {
-  return model.reduceFieldDef(function(aggregator: Dict<FieldDef>, fieldDef: FieldDef) {
-    if (fieldDef.aggregate !== 'count') { // Ignore * for count(*) fields.
-      if (model.config.filterInvalid ||
-        (model.config.filterInvalid === undefined && (fieldDef.field && DEFAULT_NULL_FILTERS[fieldDef.type]))) {
-        aggregator[fieldDef.field] = fieldDef;
-      } else {
-        // define this so we know that we don't filter nulls for this field
-        // this makes it easier to merge into parents
-        aggregator[fieldDef.field] = null;
+export class NullFilterNode extends DataFlowNode {
+  private _aggregator: Dict<FieldDef>;
+
+  constructor(model: Model) {
+    super();
+
+    this._aggregator = model.reduceFieldDef(function(aggregator: Dict<FieldDef>, fieldDef: FieldDef) {
+      if (fieldDef.aggregate !== 'count') { // Ignore * for count(*) fields.
+        if (model.config.filterInvalid ||
+          (model.config.filterInvalid === undefined && (fieldDef.field && DEFAULT_NULL_FILTERS[fieldDef.type]))) {
+          aggregator[fieldDef.field] = fieldDef;
+        } else {
+          // define this so we know that we don't filter nulls for this field
+          // this makes it easier to merge into parents
+          aggregator[fieldDef.field] = null;
+        }
       }
-    }
-    return aggregator;
-  }, {});
-}
+      return aggregator;
+    }, {});
+  }
 
-export const nullFilter: DataComponentCompiler<Dict<FieldDef>> = {
-  parseUnit: parse,
+  get aggregator() {
+      return this._aggregator;
+  }
 
-  parseFacet: function(model: FacetModel) {
-    const nullFilterComponent = parse(model);
-
-    const childDataComponent = model.child.component.data;
-
-    // If child doesn't have its own data source, then merge
-    if (!childDataComponent.source) {
-      extend(nullFilterComponent, childDataComponent.nullFilter);
-      delete childDataComponent.nullFilter;
-    }
-    return nullFilterComponent;
-  },
-
-  parseLayer: function(model: LayerModel) {
-    // note that we run this before source.parseLayer
-
-    // FIXME: null filters are not properly propagated right now
-    const nullFilterComponent = parse(model);
-
-    model.children.forEach((child) => {
-      const childDataComponent = child.component.data;
-      if (model.compatibleSource(child) && !differ<FieldDef>(childDataComponent.nullFilter, nullFilterComponent)) {
-        extend(nullFilterComponent, childDataComponent.nullFilter);
-        childDataComponent.nullFilter = {};
-      }
-    });
-
-    return nullFilterComponent;
-  },
-
-  assemble: function(component: Dict<FieldDef>) {
-    const filters = keys(component).reduce((_filters, field) => {
-      const fieldDef = component[field];
+  public assemble(): VgFilterTransform {
+    const filters = keys(this._aggregator).reduce((_filters, field) => {
+      const fieldDef = this._aggregator[field];
       if (fieldDef !== null) {
         _filters.push('datum["' + fieldDef.field + '"] !== null');
         if (contains([QUANTITATIVE, TEMPORAL], fieldDef.type)) {
@@ -81,9 +53,9 @@ export const nullFilter: DataComponentCompiler<Dict<FieldDef>> = {
     }, []);
 
     return filters.length > 0 ?
-      [{
+      {
         type: 'filter',
         expr: filters.join(' && ')
-      }] : [];
+      } : null;
   }
-};
+}

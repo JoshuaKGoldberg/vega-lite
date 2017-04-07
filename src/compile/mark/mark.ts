@@ -42,10 +42,7 @@ function dataFrom(model: UnitModel): string {
   if (parent && parent.isFacet()) {
     return (parent as FacetModel).facetedTable();
   }
-  if (model.stack) {
-    return model.dataName('stacked');
-  }
-  return model.dataTable();
+  return 'main';
 }
 
 const FACETED_PATH_PREFIX = 'faceted-path-';

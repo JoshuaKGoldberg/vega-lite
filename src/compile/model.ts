@@ -1,7 +1,7 @@
 import {Axis} from '../axis';
 import {Channel, COLUMN, X} from '../channel';
 import {CellConfig, Config} from '../config';
-import {Data, DataSourceType, isNamedData, SOURCE} from '../data';
+import {Data, DataSourceType, LAYOUT, MAIN, RAW} from '../data';
 import {forEach, reduce} from '../encoding';
 import {ChannelDef, field, FieldDef, FieldRefOption, isFieldDef} from '../fielddef';
 import {Legend} from '../legend';
@@ -13,9 +13,10 @@ import {Dict, extend, vals} from '../util';
 import {VgAxis, VgData, VgEncodeEntry, VgLegend, VgScale} from '../vega.schema';
 
 import {StackProperties} from '../stack';
-import {DataComponent} from './data/data';
 import {LayoutComponent} from './layout';
 
+import {DataComponent} from './data/index';
+import {assembleScale} from './scale/assemble';
 import {SelectionComponent} from './selection/selection';
 
 /**
@@ -85,9 +86,6 @@ export abstract class Model {
   public readonly data: Data;
   public readonly transforms: Transform[];
 
-  /** Name map for data sources, which can be renamed by a model's parent. */
-  protected dataNameMap: NameMapInterface;
-
   /** Name map for scales, which can be renamed by a model's parent. */
   protected scaleNameMap: NameMapInterface;
 
@@ -115,9 +113,9 @@ export abstract class Model {
 
     // If name is not provided, always use parent's givenName to avoid name conflicts.
     this.name = spec.name || parentGivenName;
+    console.log(name);
 
     // Shared name maps
-    this.dataNameMap = parent ? parent.dataNameMap : new NameMap();
     this.scaleNameMap = parent ? parent.scaleNameMap : new NameMap();
     this.sizeNameMap = parent ? parent.sizeNameMap : new NameMap();
 
@@ -162,14 +160,12 @@ export abstract class Model {
   public abstract assembleSignals(signals: any[]): any[];
 
   public abstract assembleSelectionData(data: VgData[]): VgData[];
-  public abstract assembleData(data: VgData[]): VgData[];
+  public abstract assembleData(): VgData[];
 
   public abstract assembleLayout(layoutData: VgData[]): VgData[];
 
   public assembleScales(): VgScale[] {
-    // FIXME: write assembleScales() in scale.ts that
-    // help assemble scale domains with scale signature as well
-    return vals(this.component.scales);
+    return assembleScale(this);
   }
 
   public abstract assembleMarks(): any[]; // TODO: VgMarkGroup[]
@@ -248,24 +244,21 @@ export abstract class Model {
   public abstract channelHasField(channel: Channel): boolean;
 
   public getName(text: string, delimiter: string = '_') {
-    if (this.data && text === SOURCE && isNamedData(this.data)) {
-      return this.data.name;
-    }
     return (this.name ? this.name + delimiter : '') + text;
-  }
-
-  public renameData(oldName: string, newName: string) {
-     this.dataNameMap.rename(oldName, newName);
   }
 
   /**
    * Return the data source name for the given data source type.
-   *
-   * For unit spec, this is always simply the spec.name + '-' + dataSourceType.
-   * We already use the name map so that marks and scales use the correct data.
    */
   public dataName(dataSourceType: DataSourceType): string {
-    return this.dataNameMap.get(this.getName(String(dataSourceType)));
+    switch (dataSourceType) {
+      case RAW:
+        return this.component.data.raw.source;
+      case MAIN:
+        return this.component.data.main.source;
+      case LAYOUT:
+        return 'layout';
+    }
   }
 
   public renameSize(oldName: string, newName: string) {
@@ -279,8 +272,6 @@ export abstract class Model {
   public sizeName(size: string): string {
      return this.sizeNameMap.get(this.getName(size, '_'));
   }
-
-  public abstract dataTable(): string;
 
   /** Get "field" reference for vega */
   public field(channel: Channel, opt: FieldRefOption = {}) {
