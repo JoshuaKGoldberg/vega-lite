@@ -11,12 +11,11 @@ import {Dict, flatten, keys, vals} from '../util';
 import {isSignalRefDomain, VgData, VgEncodeEntry, VgScale} from '../vega.schema';
 
 import {applyConfig, buildModel} from './common';
-import {assembleData} from './data';
 import {assembleLayout, parseLayerLayout} from './layout';
 import {Model} from './model';
 import {UnitModel} from './unit';
 
-import {parseData} from './data/index';
+import {assembleData, parseData} from './data/index';
 import {unionDomains} from './scale/domain';
 
 
@@ -75,10 +74,10 @@ export class LayerModel extends Model {
   }
 
   public parseData() {
+    this.component.data = parseData(this);
     this.children.forEach((child) => {
       child.parseData();
     });
-    this.component.data = parseData(this);
   }
 
   public parseSelection() {
@@ -197,18 +196,19 @@ export class LayerModel extends Model {
     return [];
   }
 
+  public assembleData(): VgData[] {
+     if (!this.parent) {
+      // only assemble data in the root
+      return assembleData(vals(this.component.data.sources));
+    }
+    return [];
+  };
+
   public assembleScales(): VgScale[] {
     // combine with scales from children
     return this.children.reduce((scales, c) => {
       return scales.concat(c.assembleScales());
     }, super.assembleScales());
-  }
-
-  public assembleData(): VgData[] {
-    if (!this.parent) {
-      return assembleData(vals(this.component.data.sources));
-    }
-    return null;
   }
 
   public assembleLayout(layoutData: VgData[]): VgData[] {

@@ -5,6 +5,7 @@ import {CalculateTransform, FilterTransform, isCalculate, isFilter} from '../../
 import {VgFilterTransform, VgFormulaTransform} from '../../vega.schema';
 import {Model} from '../model';
 import {DataFlowNode} from './dataflow';
+import { isArray } from 'vega-util';
 
 export class FilterNode extends DataFlowNode {
   private filter: Filter | Filter[];
@@ -13,6 +14,13 @@ export class FilterNode extends DataFlowNode {
     super();
 
     this.filter = transform.filter;
+  }
+
+  public merge(other: FilterNode) {
+    this.filter = (isArray(this.filter) ? this.filter : [this.filter]).concat(
+      isArray(other.filter) ? other.filter : [other.filter]);
+
+    this.remove();
   }
 
   public assemble(): VgFilterTransform {
@@ -38,10 +46,14 @@ export class CalculateNode extends DataFlowNode {
   }
 }
 
+/**
+ * Parses a transforms array into a chain of connected dataflow nodes.
+ */
 export function parseTransformArray(model: Model) {
   let first: DataFlowNode;
   let last: DataFlowNode;
   let node: DataFlowNode;
+  let previous: DataFlowNode;
 
   model.transforms.forEach((t, i) => {
     if (isCalculate(t)) {
@@ -54,7 +66,10 @@ export function parseTransformArray(model: Model) {
 
     if (i === 0) {
       first = node;
+    } else {
+      node.parent = previous;
     }
+    previous = node;
   });
 
   last = node;

@@ -3,14 +3,14 @@ import {DateTime, isDateTime} from '../../datetime';
 import {FieldDef, isCount} from '../../fielddef';
 import {isEqualFilter, isOneOfFilter, isRangeFilter} from '../../filter';
 import {QUANTITATIVE, TEMPORAL} from '../../type';
-import {Dict, isArray, isNumber, isString, keys} from '../../util';
+import {Dict, extend, isArray, isNumber, isString, keys} from '../../util';
 
  import {CalculateTransform, FilterTransform, isCalculate, isFilter} from '../../transform';
 import {Model} from './../model';
 import {DataFlowNode} from './dataflow';
 
 export class ParseNode extends DataFlowNode {
-  private parse: Dict<string> = {};
+  private _parse: Dict<string> = {};
 
   constructor(model: Model) {
     super();
@@ -41,11 +41,11 @@ export class ParseNode extends DataFlowNode {
 
         if (!!val) {
           if (isDateTime(val)) {
-            this.parse[f['field']] = 'date';
+            this._parse[f['field']] = 'date';
           } else if (isNumber(val)) {
-            this.parse[f['field']] = 'number';
+            this._parse[f['field']] = 'number';
           } else if (isString(val)) {
-            this.parse[f['field']] = 'string';
+            this._parse[f['field']] = 'string';
           }
         }
       });
@@ -54,12 +54,12 @@ export class ParseNode extends DataFlowNode {
     // Parse encoded fields
     model.forEachFieldDef((fieldDef: FieldDef) => {
       if (fieldDef.type === TEMPORAL) {
-        this.parse[fieldDef.field] = 'date';
+        this._parse[fieldDef.field] = 'date';
       } else if (fieldDef.type === QUANTITATIVE) {
         if (isCount(fieldDef) || calcFieldMap[fieldDef.field]) {
           return;
         }
-        this.parse[fieldDef.field] = 'number';
+        this._parse[fieldDef.field] = 'number';
       }
     });
 
@@ -68,12 +68,22 @@ export class ParseNode extends DataFlowNode {
     if (data && isUrlData(data) && data.format && data.format.parse) {
       const parse = data.format.parse;
       keys(parse).forEach((field) => {
-        this.parse[field] = parse[field];
+        this._parse[field] = parse[field];
       });
     }
   }
 
+  public get parse() {
+    return this._parse;
+  }
+
+
+  public merge(other: ParseNode) {
+    this._parse = extend(this._parse, other.parse);
+    other.remove();
+  }
+
   public assemble() {
-    return this.parse;
+    return this._parse;
   }
 }

@@ -10,7 +10,7 @@ import {Scale} from '../scale';
 import {FacetSpec} from '../spec';
 import {StackProperties} from '../stack';
 import {contains, Dict, extend, flatten, keys, vals} from '../util';
-import {VgData, VgEncodeEntry} from '../vega.schema';
+import { VgData, VgEncodeEntry } from '../vega.schema';
 
 import {parseAxisComponent, parseGridAxis, parseMainAxis} from './axis/parse';
 import {gridShow} from './axis/rules';
@@ -18,20 +18,11 @@ import {buildModel} from './common';
 import {assembleLayout, parseFacetLayout} from './layout';
 import {Model} from './model';
 
-import {assembleFacetData, parseData} from './data/index';
+import { assembleData, parseData, assembleFacetData } from './data/index';
 import initScale from './scale/init';
 import parseScaleComponent from './scale/parse';
+import { MAIN, COLUMN_SUMMARY, ROW_SUMMARY } from '../data';
 
-/**
- * Prefix for special data sources for driving column's axis group.
- */
-
-export const COLUMN_AXES_DATA_PREFIX = 'column-';
-
-/**
- * Prefix for special data sources for driving row's axis group.
- */
-export const ROW_AXES_DATA_PREFIX = 'row-';
 
 export class FacetModel extends Model {
   public readonly facet: Facet;
@@ -136,18 +127,13 @@ export class FacetModel extends Model {
     return !!this.facet[channel];
   }
 
-  public facetedTable(): string {
-    // FIXME: revise if the suffix should be 'data'
-    return 'faceted-' + this.getName('data');
-  }
-
   public fieldDef(channel: Channel): FieldDef {
     return this.facet[channel];
   }
 
   public parseData() {
-    this.child.parseData();
     this.component.data = parseData(this);
+    this.child.parseData();
   }
 
   public parseSelection() {
@@ -191,33 +177,23 @@ export class FacetModel extends Model {
   public parseMark() {
     this.child.parseMark();
 
-    this.component.mark = extend(
-      {
-        name: this.getName('cell'),
-        type: 'group',
-        from: extend(
-          {
-            facet: {
-              name: this.facetedTable(),
-              data: null,
-              groupby: [].concat(
-                this.channelHasField(ROW) ? [this.field(ROW)] : [],
-                this.channelHasField(COLUMN) ? [this.field(COLUMN)] : []
-              )
-            }
-          }
-        ),
-        encode: {
-          update: getFacetGroupProperties(this)
+    this.component.mark = [{
+      name: this.getName('cell'),
+      type: 'group',
+      from: {
+        facet: {
+          name: this.child.dataName(MAIN),
+          data: this.dataName(MAIN),
+          groupby: [].concat(
+            this.channelHasField(ROW) ? [this.field(ROW)] : [],
+            this.channelHasField(COLUMN) ? [this.field(COLUMN)] : []
+          )
         }
       },
-      // FIXME: move this call to assembleMarks()
-      // Call child's assembleGroup to add marks, scales, axes, and legends.
-      // Note that we can call child's assembleGroup() here because parseMark()
-      // is the last method in compile() and thus the child is completely compiled
-      // at this point.
-      this.child.assembleGroup()
-    );
+      encode: {
+        update: getFacetGroupProperties(this)
+      }
+    }];
   }
 
   public parseAxis() {
@@ -262,6 +238,19 @@ export class FacetModel extends Model {
     this.child.component.legends = {};
   }
 
+  public assembleData(): VgData[] {
+    let data: VgData[] = [];
+    if (!this.parent) {
+      // only assemble data in the root
+      data = assembleData(vals(this.component.data.sources));
+    }
+
+    // data after faceting
+    data = data.concat(assembleFacetData(this.component.data.facetRoot));
+
+    return data;
+  };
+
   public assembleParentGroupProperties(): any {
     return null;
   }
@@ -274,24 +263,25 @@ export class FacetModel extends Model {
     return [];
   }
 
-  public assembleData(): VgData[] {
-    return assembleFacetData(this.component.data.root);
-  }
-
-
   public assembleLayout(layoutData: VgData[]): VgData[] {
     // Postfix traversal – layout is assembled bottom-up
     this.child.assembleLayout(layoutData);
     return assembleLayout(this, layoutData);
   }
 
-  public assembleMarks(): any[] {
-    return [].concat(
+  public assembleMarks(): VgEncodeEntry[] {
+    const mark = this.component.mark[0];
+    // correct the name of the faceted data source
+    mark.from.facet.name = this.child.dataName(mark.from.facet.name);
+
+    const marks = [].concat(
       // axisGroup is a mapping to VgMarkGroup
       vals(this.component.axisGroups),
       flatten(vals(this.component.gridGroups)),
-      this.component.mark
+      extend(mark, this.child.assembleGroup())
     );
+
+    return marks.map(this.correctDataNames);
   }
 
   public channels() {
@@ -399,7 +389,7 @@ export function getSharedAxisGroup(model: FacetModel, channel: 'x' | 'y'): VgEnc
 
     // TODO: We might only need to drive this with special data source if there are both row and column
     // However, it might be slightly difficult as we have to merge this with the main group.
-    axesGroup.from = {data: model.component.data.root.name};
+    axesGroup.from = {data: channel === 'x' ? model.dataName(COLUMN_SUMMARY) : model.dataName(ROW_SUMMARY)};
   }
 
   if (isX) {
@@ -449,7 +439,7 @@ function getRowGridGroups(model: Model): any[] { // TODO: VgMarks
     name: model.getName('row-grid'),
     type: 'rule',
     from: {
-      data: model.component.data.root.name
+      data: model.dataName(MAIN)
     },
     encode: {
       update: {
@@ -489,7 +479,7 @@ function getColumnGridGroups(model: Model): any { // TODO: VgMarks
     name: model.getName('column-grid'),
     type: 'rule',
     from: {
-      data: model.component.data.root.name
+      data: model.dataName(MAIN)
     },
     encode: {
       update: {

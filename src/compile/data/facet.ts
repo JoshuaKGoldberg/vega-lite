@@ -1,39 +1,69 @@
 import {COLUMN, ROW} from '../../channel';
-import {VgData} from '../../vega.schema';
-import {COLUMN_AXES_DATA_PREFIX, FacetModel, ROW_AXES_DATA_PREFIX} from '../facet';
-import {DataFlowNode} from './dataflow';
+import { VgData, VgTransform } from '../../vega.schema';
+import {FacetModel} from '../facet';
+import { DataFlowNode, OutputNode } from './dataflow';
 
+/**
+ * A node that helps us track what fields we are faceting by.
+ */
 export class FacetNode extends DataFlowNode {
-  private readonly prefix: string;
-  private readonly field: string;
-  // facet is special in that the name will never change so we can set it right away.
+  public readonly fields: string[];
+
+  public source: string;
+
   public readonly name: string;
-  private _source: string;
 
   public constructor(model: FacetModel) {
     super();
 
+    this.fields = [];
+
     if (model.facet.column) {
-      this.prefix = COLUMN_AXES_DATA_PREFIX;
+      this.fields.push(model.field(COLUMN));
+    }
+
+    if (model.facet.row) {
+      this.fields.push(model.field(ROW));
+    }
+
+    this.name = model.getName('facet');
+  }
+}
+
+/**
+ * Add aggregation that we need to create correct axes for faceted charts.
+ *
+ * This is a special output node that is always required when instantiated.
+ */
+export class FacetAggregateNode extends OutputNode {
+  private readonly field: string;
+  public readonly name: string;
+
+  public constructor(model: FacetModel, field: 'column' | 'row') {
+    super(field);
+
+    this.markRequired();
+
+    if (!model.facet[field]) {
+      throw new Error('Unnecessary data output.');
+    }
+
+    switch (field) {
+      case 'column':
       this.field = model.field(COLUMN);
-    } else if (model.facet.row) {
-      this.prefix = ROW_AXES_DATA_PREFIX;
+      this.name = model.getName('column', '-');
+      break;
+    case 'row':
       this.field = model.field(ROW);
+      this.name = model.getName('row', '-');
+      break;
     }
   }
 
-  set source(source: string) {
-    this._source = source;
-  }
-
-  public assemble(): VgData {
+  public assemble(): VgTransform {
     return {
-      name: this.prefix + this._source,
-      source: this._source,
-      transform: [{
-        type: 'aggregate',
-        groupby: [this.field]
-      }]
+      type: 'aggregate',
+      groupby: [this.field]
     };
   }
 }

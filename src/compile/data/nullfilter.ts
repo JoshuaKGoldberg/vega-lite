@@ -1,6 +1,6 @@
  import {FieldDef} from '../../fielddef';
 import {QUANTITATIVE, TEMPORAL} from '../../type';
-import {contains, Dict, keys} from '../../util';
+import { contains, Dict, keys, extend, differ, hash, differArray } from '../../util';
 import {VgFilterTransform} from '../../vega.schema';
 import {Model} from './../model';
 import {DataFlowNode} from './dataflow';
@@ -35,6 +35,16 @@ export class NullFilterNode extends DataFlowNode {
 
   get aggregator() {
       return this._aggregator;
+  }
+
+  public merge(other: NullFilterNode) {
+    const t = Object.keys(this._aggregator).map(k => k + ' ' + hash(this._aggregator[k]));
+    const o = Object.keys(other.aggregator).map(k => k + ' ' + hash(other.aggregator[k]));
+
+    if (!differArray(t, o)) {
+      this._aggregator = extend(this._aggregator, other._aggregator);
+      other.remove();
+    }
   }
 
   public assemble(): VgFilterTransform {

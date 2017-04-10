@@ -1,12 +1,13 @@
 
 
  import {field, FieldDef} from '../../fielddef';
-import {fieldExpr} from '../../timeunit';
+import { fieldExpr, TimeUnit } from '../../timeunit';
 import {TEMPORAL} from '../../type';
-import {Dict, vals} from '../../util';
+import {Dict, vals, extend} from '../../util';
 import {VgFormulaTransform} from '../../vega.schema';
 import {Model} from '../model';
 import {DataFlowNode} from './dataflow';
+import { format } from '../axis/rules';
 
 export class TimeUnitNode extends DataFlowNode {
   private formula: Dict<VgFormulaTransform>;
@@ -29,6 +30,11 @@ export class TimeUnitNode extends DataFlowNode {
 
   public size() {
     return Object.keys(this.formula).length;
+  }
+
+  public merge(other: TimeUnitNode) {
+    this.formula = extend(this.formula, other.formula);
+    other.remove();
   }
 
   public assemble() {

@@ -15,7 +15,8 @@ import {SelectionDef} from '../selection';
 import {stack, StackProperties} from '../stack';
 import {parseAxisComponent} from './axis/parse';
 import {applyConfig} from './common';
-import {assembleData, parseData} from './data';
+import {parseData} from './data';
+import {assembleData} from './data/index';
 import {assembleLayout, parseUnitLayout} from './layout';
 import {parseLegendComponent} from './legend/parse';
 import {initEncoding, initMarkDef} from './mark/init';
@@ -245,6 +246,14 @@ export class UnitModel extends Model {
     this.component.legends = parseLegendComponent(this);
   }
 
+  public assembleData(): VgData[] {
+     if (!this.parent) {
+      // only assemble data in the root
+      return assembleData(vals(this.component.data.sources));
+    }
+    return [];
+  };
+
   public assembleSignals(signals: any[]): any[] {
     return assembleUnitSignals(this, signals);
   }
@@ -253,27 +262,15 @@ export class UnitModel extends Model {
     return assembleSelectionData(this, data);
   }
 
-  public assembleData(): VgData[] {
-    if (!this.parent) {
-      // only assemble data in the root
-      return assembleData(vals(this.component.data.sources));
-    }
-    return null;
-  }
-
   public assembleLayout(layoutData: VgData[]): VgData[] {
     return assembleLayout(this, layoutData);
   }
 
   public assembleMarks() {
-    const marks = this.component.mark;
+    let marks = this.component.mark;
+    marks = assembleSelectionMarks(this, marks);
 
-    // TODO: make this correct
-    marks.forEach(mark => {
-      mark.from.data = this.dataName(mark.from.data);
-    });
-
-    return assembleSelectionMarks(this, marks);
+    return marks.map(this.correctDataNames);
   }
 
   public assembleParentGroupProperties(cellConfig: CellConfig) {

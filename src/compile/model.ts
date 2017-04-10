@@ -1,7 +1,7 @@
 import {Axis} from '../axis';
 import {Channel, COLUMN, X} from '../channel';
 import {CellConfig, Config} from '../config';
-import {Data, DataSourceType, LAYOUT, MAIN, RAW} from '../data';
+import { Data, DataSourceType, LAYOUT, MAIN, RAW, ROW_SUMMARY, COLUMN_SUMMARY } from '../data';
 import {forEach, reduce} from '../encoding';
 import {ChannelDef, field, FieldDef, FieldRefOption, isFieldDef} from '../fielddef';
 import {Legend} from '../legend';
@@ -113,7 +113,6 @@ export abstract class Model {
 
     // If name is not provided, always use parent's givenName to avoid name conflicts.
     this.name = spec.name || parentGivenName;
-    console.log(name);
 
     // Shared name maps
     this.scaleNameMap = parent ? parent.scaleNameMap : new NameMap();
@@ -124,7 +123,9 @@ export abstract class Model {
     this.description = spec.description;
     this.transforms = spec.transform || [];
 
-    this.component = {data: null, layout: null, mark: null, scales: null, axes: null, axisGroups: null, gridGroups: null, legends: null, selection: null};
+    this.component = {data: {
+      sources: parent ? parent.component.data.sources : {}
+    }, layout: null, mark: null, scales: null, axes: null, axisGroups: null, gridGroups: null, legends: null, selection: null};
   }
 
   public parse() {
@@ -186,7 +187,6 @@ export abstract class Model {
       group.signals = signals;
     }
 
-    // TODO: consider if we want scales to come before marks in the output spec.
     group.marks = this.assembleMarks();
     const scales = this.assembleScales();
     if (scales.length > 0) {
@@ -250,7 +250,7 @@ export abstract class Model {
   /**
    * Return the data source name for the given data source type.
    */
-  public dataName(dataSourceType: DataSourceType): string {
+  public dataName(dataSourceType: DataSourceType | string): string {
     switch (dataSourceType) {
       case RAW:
         return this.component.data.raw.source;
@@ -258,6 +258,12 @@ export abstract class Model {
         return this.component.data.main.source;
       case LAYOUT:
         return 'layout';
+      case ROW_SUMMARY:
+        return this.component.data.row.name;
+      case COLUMN_SUMMARY:
+        return this.component.data.column.name;
+      default:
+        return dataSourceType;
     }
   }
 
@@ -336,6 +342,25 @@ export abstract class Model {
 
   public legend(channel: Channel): Legend {
     return this.legends[channel];
+  }
+
+  /**
+   * Corrects the data references in marks after assemble.
+   */
+  public correctDataNames = (mark: VgEncodeEntry) => {
+    // TODO: make this correct
+
+    // for normal data references
+    if (mark.from && mark.from.data) {
+      mark.from.data = this.dataName(mark.from.data);
+    }
+
+    // for access to facet data
+    if (mark.from && mark.from.facet && mark.from.facet.data) {
+      mark.from.facet.data = this.dataName(mark.from.facet.data);
+    }
+
+    return mark;
   }
 
   /**

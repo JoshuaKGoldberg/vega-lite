@@ -2,7 +2,6 @@
 
 import {assert} from 'chai';
 
-
 import {SourceNode} from '../../../src/compile/data/source';
 import {Model} from '../../../src/compile/model';
 import {parseUnitModel} from '../../util';
@@ -147,3 +146,4 @@ describe('compile/data/source', function() {
     // TODO: write test
   });
 });
+

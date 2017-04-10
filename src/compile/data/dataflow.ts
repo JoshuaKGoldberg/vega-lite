@@ -7,7 +7,8 @@ export class DataFlowNode {
   private _children: DataFlowNode[];
 
   private _parent: DataFlowNode;
-  constructor() {
+
+  constructor(public readonly debugName?: string) {
     this._children = [];
     this._parent = null;
   };
@@ -16,6 +17,9 @@ export class DataFlowNode {
     return this._parent;
   }
 
+  /**
+   * Set the parent of the node and also add this not to the parent's children.
+   */
   set parent(parent: DataFlowNode) {
     this._parent = parent;
     parent.addChild(this);
@@ -33,39 +37,72 @@ export class DataFlowNode {
     this._children.splice(this._children.indexOf(oldChild), 1);
   }
 
-  public remove() {
-    this._children.forEach(child => {
-      child.parent = this._parent;
-    });
+  public clearChildren() {
+    this._children = [];
+  }
 
+  /**
+   * Remove node from the dataflow.
+   */
+  public remove() {
+    this._children.forEach(child => child.parent = this._parent);
     this._parent.removeChild(this);
+  }
+
+  public swapWithParent() {
+    const newParent = this._parent.parent;
+    const parent = this._parent;
+
+    // reconnect the children
+    this._children.forEach(c => c.parent = parent);
+
+    // remove old links
+    this.clearChildren();  // equivalent to emoving every child link one by one
+    parent.removeChild(this);
+    parent.parent.removeChild(parent);
+
+
+    // swap two nodes
+    this.parent = newParent;
+    parent.parent = this;
   }
 }
 
 export class OutputNode extends DataFlowNode {
 
-  private _name: string;
+  private _source: string;
 
-  public source: string;
+  private _required = false;
 
-  constructor(name: string, private required = false) {
-    super();
+  constructor(source: string) {
+    super(source);
 
-    this._name = name;
+    this._source = source;
   }
 
   /**
-   * Mark this node as required so we don't instantiate a data source in Vega.
+   * Request the datasource name.
+   *
+   * During the parsing phase, this will return the simple name such as 'main' or 'raw'.
+   * It is crucial to requet the name from an output node to mark it as a required node.
+   * If nobody ever requests the name, this datasource will not be instantiated.
+   *
+   * In the assemble phase, this will return the correct name.
    */
-  public setRequired() {
-    this.required = true;
+  get source() {
+    this.markRequired();
+    return this._source;
   }
 
-  public needsAssembly() {
-    return !(this.parent instanceof OutputNode) && this.required;
+  set source(source: string) {
+    this._source = source;
   }
 
-  get name() {
-    return this._name;
+  public markRequired() {
+    this._required = true;
+  }
+
+  get required() {
+    return this._required;
   }
 }

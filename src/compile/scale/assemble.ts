@@ -6,6 +6,7 @@ import {Model} from '../model';
 
 export function assembleScale(model: Model) {
     return vals(model.component.scales).map(scale => {
+      // correct references to data
       const domain = scale.domain;
       if (isDataRefDomain(domain)) {
         domain.data = model.dataName(domain.data as DataSourceType);

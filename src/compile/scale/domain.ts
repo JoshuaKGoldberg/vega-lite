@@ -20,6 +20,7 @@ import {
   VgSortField
 } from '../../vega.schema';
 
+import {varName} from '../../util';
 import {Model} from '../model';
 import { MAIN, RAW } from '../../data';
 
@@ -80,7 +81,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       return [0, 1];
     }
     return {
-      data: MAIN,
+      data: model.dataName(MAIN),
       fields: [
         model.field(channel, {suffix: 'start'}),
         model.field(channel, {suffix: 'end'})
@@ -92,7 +93,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
 
   if (scale.domain === 'unaggregated') {
     return {
-      data: MAIN,
+      data: model.dataName(MAIN),
       fields: [
         model.field(channel, {aggregate: 'min'}),
         model.field(channel, {aggregate: 'max'})
@@ -108,7 +109,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       // ordinal bin scale takes domain from bin_range, ordered by bin_start
       // This is useful for both axis-based scale (x, y, column, and row) and legend-based scale (other channels).
       return {
-        data: MAIN,
+        data: model.dataName(MAIN),
         field: model.field(channel, {binSuffix: 'range'}),
         sort: {
           field: model.field(channel, {binSuffix: 'start'}),
@@ -119,7 +120,7 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       if (channel === 'x' || channel === 'y') {
         // X/Y position have to include start and end for non-ordinal scale
         return {
-          data: MAIN,
+          data: model.dataName(MAIN),
           fields: [
             model.field(channel, {binSuffix: 'start'}),
             model.field(channel, {binSuffix: 'end'})
@@ -128,29 +129,23 @@ function parseSingleChannelDomain(scale: Scale, model: Model, channel:Channel): 
       } else {
         // TODO: use bin_mid
         return {
-          data: MAIN,
+          data: model.dataName(MAIN),
           field: model.field(channel, {binSuffix: 'start'})
         };
       }
     }
   } else if (sort) { // have sort -- only for ordinal
 
-    // If sort by aggregation of a specified sort field, we need to use RAW table,
-    // so we can aggregate values for the scale independently from the main aggregation.
-    const needsRaw = !util.isBoolean(sort);
-
-    if (needsRaw) {
-      model.component.data.raw.setRequired();
-    }
-
     return {
-      data: needsRaw ? RAW : MAIN,
+      // If sort by aggregation of a specified sort field, we need to use RAW table,
+      // so we can aggregate values for the scale independently from the main aggregation.
+      data: util.isBoolean(sort) ? model.dataName(MAIN) : model.dataName(RAW),
       field: model.field(channel),
       sort: sort
     };
   } else {
     return {
-      data: MAIN,
+      data: model.dataName(MAIN),
       field: model.field(channel),
     };
   }

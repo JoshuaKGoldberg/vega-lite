@@ -1,6 +1,6 @@
 
 import {field, FieldDef} from '../../fielddef';
-import {Dict, keys, StringSet} from '../../util';
+import { Dict, keys, StringSet, extend, differ } from '../../util';
 import {VgAggregateTransform} from '../../vega.schema';
 import {Model} from './../model';
 import {DataFlowNode} from './dataflow';
@@ -79,6 +79,19 @@ export class AggregateNode extends DataFlowNode {
 
   public size() {
     return Object.keys(this.dimensions).length;
+  }
+
+  public merge(other: AggregateNode) {
+    if (!differ(this.dimensions, other.dimensions)) {
+      mergeMeasures(this.measures, other.measures);
+      other.remove();
+    } else {
+      console.log('different dimensions, cannot merge');
+    }
+  }
+
+  public addDimensions(fields: string[]) {
+    fields.forEach(f => this.dimensions[f] = true);
   }
 
   public assemble(): VgAggregateTransform {

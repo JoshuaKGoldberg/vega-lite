@@ -1,22 +1,25 @@
 import {TimeUnitNode} from './timeunit';
 
-import {VgData} from '../../vega.schema';
+import { VgData } from '../../vega.schema';
 
-import {MAIN, RAW} from '../../data';
+import {COLUMN, ROW} from '../../channel';
 import {Dict, every, vals} from '../../util';
+import { FacetModel } from '../facet';
 import {Model} from '../model';
 import {UnitModel} from '../unit';
-import {FacetModel} from './../facet';
 import {AggregateNode} from './aggregate';
-import {BinNode} from './bin';
-import {DataFlowNode, OutputNode} from './dataflow';
-import {FacetNode} from './facet';
+import { BinNode } from './bin';
+import { DataFlowNode, OutputNode } from './dataflow';
+import { FacetAggregateNode, FacetNode } from './facet';
 import {ParseNode} from './formatparse';
 import {NonPositiveFilterNode} from './nonpositivefilter';
-import {NullFilterNode} from './nullfilter';
-import {SourceNode} from './source';
+import { NullFilterNode } from './nullfilter';
+import { SourceNode } from './source';
 import {StackNode} from './stack';
-import {CalculateNode, FilterNode, parseTransformArray} from './transforms';
+import { CalculateNode, FilterNode, parseTransformArray } from './transforms';
+import { MAIN, RAW } from '../../data';
+import { OrderNode } from './pathorder';
+import { field } from '../../fielddef';
 
 export interface DataComponent {
   /**
@@ -41,7 +44,13 @@ export interface DataComponent {
   /**
    * For facets, we store the reference to the root node.
    */
-  root?: FacetNode;
+  facetRoot?: FacetNode;
+
+  /**
+   * Output nodes for axes of faceted charts.
+   */
+  row?: FacetAggregateNode;
+  column?: FacetAggregateNode;
 }
 
 function parseRoot(model: Model, sources: Dict<SourceNode>): DataFlowNode {
@@ -58,8 +67,8 @@ function parseRoot(model: Model, sources: Dict<SourceNode>): DataFlowNode {
       return source;
     }
   } else {
-    // If we don't have a source defined, use the parent.
-    return model.parent.component.data.main;
+    // If we don't have a source defined, use the parent's facet root or main.
+    return model.parent.component.data.facetRoot || model.parent.component.data.main;
   }
 }
 
@@ -95,25 +104,29 @@ Description of the dataflow (http://asciiflow.com/):
      Aggregate
          |
          v
+     Path Order
+         |
+         v
        Stack
          |
          v
       >0 Filter
          |
          v
-     +---+---+
-     | Main  +-----> Child data...
-     +---+---+
-         |
-         v
-       Layout
+   +----------+----> Child data...
+   |   Main   |
+   ++--------++----> Layout
+    |        |
+    v        v
++---+----+ +-+-----+
+| Facet  | | Facet |
+| Column | | Row   |
++--------+ +-------+
 
 */
 
 export function parseData(model: Model): DataComponent {
-  const sources = model.parent ? model.parent.component.data.sources : {};
-
-  const root = parseRoot(model, sources);
+  const root = parseRoot(model, model.component.data.sources);
 
   // the current head of the tree that we are appending to
   let head = root;
@@ -122,14 +135,6 @@ export function parseData(model: Model): DataComponent {
   const parse = new ParseNode(model);
   parse.parent = root;
   head = parse;
-
-  // FIXME
-  // add facet if this is a facet model
-  if (model instanceof FacetModel) {
-    const facet = new FacetNode(model);
-    facet.parent = head;
-    head = facet;
-  }
 
   // handle transforms array
   if (model.transforms.length > 0) {
@@ -140,8 +145,10 @@ export function parseData(model: Model): DataComponent {
 
   // add nullfilter
   const nullFilter = new NullFilterNode(model);
-  nullFilter.parent = head;
-  head = nullFilter;
+  if (Object.keys(nullFilter.aggregator).length) {
+    nullFilter.parent = head;
+    head = nullFilter;
+  }
 
   // handle binning
   const bin = new BinNode(model);
@@ -158,15 +165,25 @@ export function parseData(model: Model): DataComponent {
   }
 
   // add an output node pre aggregation
-  const raw = new OutputNode(model.getName(RAW));
+  const raw = new OutputNode(RAW);
   raw.parent = head;
   head = raw;
 
   // handle aggregation
-  const agg = new AggregateNode(model);
-  if (agg.size()) {
-    agg.parent = head;
-    head = agg;
+  if (model instanceof UnitModel) {
+    const agg = new AggregateNode(model);
+    if (agg.size()) {
+      agg.parent = head;
+      head = agg;
+    }
+  }
+
+  if (model instanceof UnitModel) {
+    const order = new OrderNode(model);
+    if (order.hasFields()) {
+      order.parent = head;
+      head = order;
+    }
   }
 
   if (model instanceof UnitModel && model.stack) {
@@ -184,46 +201,270 @@ export function parseData(model: Model): DataComponent {
   }
 
   // output node for marks
-  const main = new OutputNode(model.getName(MAIN), true);  // required by default
+  const main = new OutputNode(MAIN);
   main.parent = head;
   head = main;
 
+  // output nodes for facet summaries that we need to create axes on the outside
+  let row: FacetAggregateNode = null;
+  let column: FacetAggregateNode = null;
+  if (model instanceof FacetModel) {
+    if (model.facet.column) {
+      column = new FacetAggregateNode(model, COLUMN);
+      column.parent = head;
+    }
+    if (model.facet.row) {
+      row = new FacetAggregateNode(model, ROW);
+      row.parent = head;
+    }
+  }
+
+  // add facet marker
+  let facetRoot = null;
+  if (model instanceof FacetModel) {
+    facetRoot = new FacetNode(model);
+    facetRoot.parent = head;
+    head = facetRoot;
+  }
+
   return {
-    sources,
+    sources: model.component.data.sources,
     raw,
-    main
+    main,
+    facetRoot,
+    row,
+    column
   };
 }
 
-export function assembleFacetData(root: FacetNode): VgData[] {
-  return [];
+/**
+ * use with optimizeFromLeaves
+ */
+function optimizeParse(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode) {
+    return next;
+  }
+
+  // move parse up by merging or swapping
+  if (node instanceof ParseNode) {
+    if (node.parent instanceof ParseNode) {
+      node.parent.merge(node);
+    } else {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  return next;
 }
 
-function optimize(node: DataFlowNode) {
+/**
+ * Use with optimizeFromLeaves.
+ */
+function optimizeBin(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode || node.parent instanceof CalculateNode) {
+    return next;
+  }
+
+  // move parse up by merging or swapping
+  if (node instanceof BinNode) {
+    if (node.parent instanceof BinNode) {
+      node.parent.merge(node);
+    } else {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  return next;
+}
+
+function optimizeTimeUnit(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode || node.parent instanceof CalculateNode) {
+    return next;
+  }
+
+  // move parse up by merging or swapping
+  if (node instanceof TimeUnitNode) {
+    if (node.parent instanceof TimeUnitNode) {
+      node.parent.merge(node);
+    } else {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  return next;
+}
+
+function optimizeAggregate(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode || node.parent instanceof CalculateNode || node.parent instanceof FilterNode) {
+    return next;
+  }
+
+  // move parse up by merging or swapping
+  if (node instanceof AggregateNode) {
+    if (node.parent instanceof AggregateNode) {
+      node.parent.merge(node);
+    } else if (node.parent instanceof FacetNode) {
+      // TODO: don't do this if we want independent scales
+      node.addDimensions(node.parent.fields);
+      node.swapWithParent();
+    } else {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  return next;
+}
+
+function optimizeStack(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode || node.parent instanceof CalculateNode || node.parent instanceof FilterNode) {
+    return next;
+  }
+
+  if (node instanceof StackNode) {
+    if (node.parent instanceof FacetNode) {
+      // TODO: don't do this if we want independent scales
+      node.addDimensions(node.parent.fields);
+    } else {
+      next = node.parent;
+    }
+    node.swapWithParent();
+  }
+
+  return next;
+}
+
+function optimizeNullfilter(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode || node.parent instanceof CalculateNode) {
+    return next;
+  }
+
+  // move parse up by merging or swapping
+  if (node instanceof NullFilterNode) {
+    if (node.parent instanceof NullFilterNode) {
+      node.parent.merge(node);
+    } else {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  return next;
+}
+
+function optimizeTransforms(node: DataFlowNode) {
+  let next = node.parent;
+
+  if (node.parent instanceof SourceNode) {
+    return next;
+  }
+
+  // make sure we preserve the order between filter and calculate nodes
+
+  if (node instanceof FilterNode) {
+    if (node.parent instanceof FilterNode) {
+      node.parent.merge(node);
+    }
+
+    if (!(node.parent instanceof CalculateNode)) {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  if (node instanceof CalculateNode) {
+    if (!(node.parent instanceof FilterNode)) {
+      next = node.parent;
+      node.swapWithParent();
+    }
+  }
+
+  return next;
+}
+
+/**
+ * Start optimization path at the leaves. Useful for merging up things.
+ */
+function optimizeFromLeaves(f: (node: DataFlowNode) => DataFlowNode) {
+  function optimizeNextFromLeaves(node: DataFlowNode) {
+    if (!node.parent) {
+      // done
+      return;
+    }
+
+    optimizeNextFromLeaves(f(node));
+  }
+
+  return optimizeNextFromLeaves;
+}
+
+/**
+ * Start optimization path from the root. Useful for removing nodes.
+ */
+function optimizeFromRoots(node: DataFlowNode) {
   // remove empty non positive filter
   if (node instanceof NonPositiveFilterNode && every(vals(node.filter), b => b === false)) {
     node.remove();
   }
 
-  // remove output nodes that are not needed
-  if (node instanceof OutputNode && !node.needsAssembly()) {
+  // remove empty null filter nodes
+  if (node instanceof NullFilterNode && every(vals(node.aggregator), f => f === null)) {
     node.remove();
   }
 
-  node.children.map(optimize);
+  // remove output nodes that are not required
+  if (node instanceof OutputNode && !node.required) {
+    node.remove();
+  }
+
+  node.children.forEach(optimizeFromRoots);
 }
 
 /**
- * Creates Vega Data array from a given compiled model and append all of them to the given array
- *
- * @param  model
- * @param  data array
- * @return modified data array
+ * Return all leaf nodes.
  */
-export function assembleData(roots: SourceNode[]): VgData[] {
-  const data: VgData[] = [];
+function getLeaves(roots: DataFlowNode[]) {
+  const leaves: DataFlowNode[] = [];
+  function append(node: DataFlowNode) {
+    if (node.children.length === 0) {
+      leaves.push(node);
+    } else {
+      node.children.forEach(append);
+    }
+  }
 
-  roots.map(optimize);
+  roots.forEach(append);
+  return leaves;
+}
+
+function debug(node: DataFlowNode) {
+  console.log(`${(node.constructor as any).name}${node.debugName ? ` (${node.debugName})` : ''} -> ${
+    (node.children.map(c => {
+      return `${(c.constructor as any).name}${c.debugName ? ` (${c.debugName})` : ''}`;
+    }))
+  }`);
+  console.log(node);
+  node.children.forEach(debug);
+}
+
+function makeWalkTree(data: VgData[]) {
+  // to name datasources
+  let datasetIndex = 0;
 
   /**
    * Recursively walk down the tree.
@@ -233,8 +474,14 @@ export function assembleData(roots: SourceNode[]): VgData[] {
       if (node.parent instanceof SourceNode && dataSource.format) {
         dataSource.format.parse = node.assemble();
       } else {
-        throw new Error('noooooo');
+        throw new Error('Can only instantiate parse next to source.');
       }
+    }
+
+    if (node instanceof FacetNode) {
+      // break here because the rest of the tree has to be taken care of by the facet.
+      node.source = dataSource.source;
+      return;
     }
 
     if (node instanceof FilterNode ||
@@ -251,13 +498,39 @@ export function assembleData(roots: SourceNode[]): VgData[] {
       dataSource.transform = dataSource.transform.concat(node.assemble());
     }
 
-    if (node instanceof OutputNode) {
-      if (node.needsAssembly()) {
+    if (node instanceof FacetAggregateNode) {
+      // Facet aggregate nodes are special output nodes where we know that they never have children.
+      if (node.children.length > 0) {
+        throw new Error('facet aggregate nodes cannot have children');
+      }
+
+      if (!dataSource.name) {
+        dataSource.name = node.name;
+      }
+
+      dataSource.transform.push(node.assemble());
+      data.push(dataSource);
+
+      node.source = dataSource.name;
+
+      return;  // no children means we can stop here
+    } else if (node instanceof OutputNode) {
+      if (dataSource.source && dataSource.transform.length === 0) {
+        node.source = dataSource.source;
+      } else if (node.parent instanceof OutputNode) {
+        // Note that an output node may be required but we still do not assemble a
+        // separate data source for it.
+        node.source = dataSource.name;
+      } else {
         if (!dataSource.name) {
-          dataSource.name = node.name;
+          dataSource.name = `data_${datasetIndex++}`;
         }
 
-        // if this not has more than one child, we will add a datasource automatically
+        // Here we set the name of the datasource we generated. From now on
+        // other assemblers can use it.
+        node.source = dataSource.name;
+
+        // if this node has more than one child, we will add a datasource automatically
         if (node.children.length === 1 && dataSource.transform.length > 0) {
           data.push(dataSource);
           const newData: VgData = {
@@ -268,17 +541,6 @@ export function assembleData(roots: SourceNode[]): VgData[] {
           dataSource = newData;
         }
       }
-
-      // Here we set the name of the datasource we geenrated. From now on
-      // other assemblers can use it.
-      node.source = dataSource.name;
-    }
-
-    if (node instanceof FacetNode) {
-      // stop here, rest will be taken care of later
-      node.source = dataSource.name;
-      data.push(dataSource);
-      return;
     }
 
     switch (node.children.length) {
@@ -293,11 +555,17 @@ export function assembleData(roots: SourceNode[]): VgData[] {
         walkTree(node.children[0], dataSource);
         break;
       default:
-        data.push(dataSource);
+        let source = dataSource.name;
+        if (!dataSource.source || dataSource.transform.length > 0) {
+          data.push(dataSource);
+        } else {
+          source = dataSource.source;
+        }
+
         node.children.forEach(child => {
           const newData: VgData = {
             name: null,
-            source: dataSource.name,
+            source: source,
             transform: []
           };
           walkTree(child, newData);
@@ -306,20 +574,60 @@ export function assembleData(roots: SourceNode[]): VgData[] {
     }
   }
 
+  return walkTree;
+}
+
+export function assembleFacetData(root: FacetNode): VgData[] {
+  const data: VgData[] = [];
+  const walkTree = makeWalkTree(data);
+
+  root.children.forEach(child => walkTree(child, {
+    source: root.name,
+    transform: [],
+    name: null
+  }));
+
+  return data;
+}
+
+/**
+ * Creates Vega Data array from a given compiled model and append all of them to the given array
+ *
+ * @param  model
+ * @param  data array
+ * @return modified data array
+ */
+export function assembleData(roots: SourceNode[]): VgData[] {
+  const data: VgData[] = [];
+
+  roots.forEach(optimizeFromRoots);
+
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeStack));
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeAggregate));
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeBin));
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeTimeUnit));
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeNullfilter));
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeTransforms));
+  getLeaves(roots).forEach(optimizeFromLeaves(optimizeParse));
+
+  // TODO: merge things
+
+  roots.forEach(debug);
+
+  const walkTree = makeWalkTree(data);
+
   let sourceIndex = 0;
 
   roots.forEach(root => {
     // assign a name if the source does not have a name yet
     if (!root.hasName()) {
-      root.name = `source_${sourceIndex++}`;
+      root.dataName = `source_${sourceIndex++}`;
     }
 
     const newData: VgData = root.assemble();
 
     walkTree(root, newData);
   });
-
-  console.log(data);
 
   return data;
 

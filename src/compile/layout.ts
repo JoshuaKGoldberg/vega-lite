@@ -76,8 +76,14 @@ export function parseUnitLayout(model: UnitModel): LayoutComponent {
 }
 
 function parseUnitSizeLayout(model: UnitModel, channel: Channel): SizeComponent {
+  const distinct = getDistinct(model, channel);
+  if (keys(distinct).length > 0) {
+    // Mark main as required because we need it in assemble.
+    model.component.data.main.markRequired();
+  }
+
   return {
-    distinct: getDistinct(model, channel),
+    distinct,
     formula: [{
       as: model.channelSizeName(channel),
       expr: unitSizeExpr(model, channel)

@@ -41,6 +41,10 @@ export class OrderNode extends DataFlowNode {
     }
   }
 
+  public hasFields() {
+    return !!this.field;
+  }
+
   public assemble() {
       return {
         type: 'collect',

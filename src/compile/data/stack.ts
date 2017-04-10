@@ -7,8 +7,9 @@ import {VgSort, VgTransform} from '../../vega.schema';
 import {sortParams} from '../common';
 import {UnitModel} from './../unit';
 import {DataFlowNode} from './dataflow';
+import { Model } from '../model';
 
-function getStackByFields(model: UnitModel) {
+function getStackByFields(model: Model) {
   return model.stack.stackBy.reduce((fields, by) => {
     const channel = by.channel;
     const fieldDef = by.fieldDef;
@@ -103,8 +104,8 @@ export class StackNode extends DataFlowNode {
     return this._stack;
   }
 
-  set stack(stack) {
-    this._stack = stack;
+  public addDimensions(fields: string[]) {
+    this._stack.groupby = this._stack.groupby.concat(fields);
   }
 
   public assemble(): VgTransform[] {

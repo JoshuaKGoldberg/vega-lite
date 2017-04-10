@@ -56,7 +56,7 @@ export class SourceNode extends DataFlowNode {
     return this._name;
   }
 
-  set name(name: string) {
+  set dataName(name: string) {
     this._name = name;
   }
 

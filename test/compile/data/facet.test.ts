@@ -1,12 +1,10 @@
 import {assert} from 'chai';
-import {FacetNode} from '../../../src/compile/data/facet';
-import {COLUMN_AXES_DATA_PREFIX, FacetModel, ROW_AXES_DATA_PREFIX} from '../../../src/compile/facet';
+import {FacetAggregateNode} from '../../../src/compile/data/facet';
+import {FacetModel} from '../../../src/compile/facet';
 import {parseFacetModel} from '../../util';
 
-function assemble(model: FacetModel) {
-  const node = new FacetNode(model);
-  node.source = 'source';
-  return node.assemble();
+function parse(model: FacetModel, channel: 'row' | 'column') {
+  return new FacetAggregateNode(model, channel);
 }
 
 describe('compile/data/facet', function() {
@@ -27,16 +25,15 @@ describe('compile/data/facet', function() {
       model.component.data = {} as any;
       model['hasSummary'] = () => false;
 
+      const facet = parse(model, 'row');
+
+      assert(facet.name, 'row');
       assert.deepEqual(
-        assemble(model),
-        [{
-          name: ROW_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['a']
-          }]
-        }]
+        facet.assemble(),
+        {
+          type: 'aggregate',
+          groupby: ['a']
+        }
       );
     });
 
@@ -56,16 +53,16 @@ describe('compile/data/facet', function() {
       model.component.data = {} as any;
       model['hasSummary'] = () => false;
 
+      const facet = parse(model, 'column');
+
+      assert(facet.name, 'column');
+
       assert.deepEqual(
-        assemble(model),
-        [{
-          name: COLUMN_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['a']
-          }]
-        }]
+        facet.assemble(),
+        {
+          type: 'aggregate',
+          groupby: ['a']
+        }
       );
     });
 
@@ -86,23 +83,26 @@ describe('compile/data/facet', function() {
       model.component.data = {} as any;
       model['hasSummary'] = () => false;
 
+      const row = parse(model, 'row');
+      const col = parse(model, 'column');
+
+      assert(row.name, 'row');
+      assert(col.name, 'column');
+
       assert.deepEqual(
-        assemble(model),
-        [{
-          name: COLUMN_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['a']
-          }]
-        },{
-          name: ROW_AXES_DATA_PREFIX + 'source',
-          source: 'source',
-          transform: [{
-            type: 'aggregate',
-            groupby: ['b']
-          }]
-        }]
+        row.assemble(),
+        {
+          type: 'aggregate',
+          groupby: ['b']
+        }
+      );
+
+      assert.deepEqual(
+        col.assemble(),
+        {
+          type: 'aggregate',
+          groupby: ['a']
+        }
       );
     });
   });

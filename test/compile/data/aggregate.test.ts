@@ -5,7 +5,7 @@ import {assert} from 'chai';
 import {AggregateNode} from '../../../src/compile/data/aggregate';
 import {parseUnitModel} from '../../util';
 
-describe.only('compile/data/summary', function () {
+describe('compile/data/summary', function () {
   describe('parseUnit', function() {
     it('should produce the correct summary component for sum(Acceleration) and count(*)' , () => {
       const model = parseUnitModel({
