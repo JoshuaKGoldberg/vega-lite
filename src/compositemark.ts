@@ -4,8 +4,6 @@ import {isContinuous, isDiscrete, PositionFieldDef} from './fielddef';
 import {isMarkDef, MarkConfig, MarkDef} from './mark';
 import {GenericUnitSpec, LayerSpec} from './spec';
 
-export const ERRORBAR: 'error-bar' = 'error-bar';
-export type ERRORBAR = typeof ERRORBAR;
 export const BOX: 'box-plot' = 'box-plot';
 export type BOX = typeof BOX;
 
@@ -41,43 +39,6 @@ export function normalize(
 
   throw new Error(`Unregistered composite mark ${mark}`);
 }
-
-
-
-add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
-  const {mark: _m, encoding: encoding, ...outerSpec} = spec;
-  const {size: _s, ...encodingWithoutSize} = encoding;
-  const {x2: _x2, y2: _y2, ...encodingWithoutX2Y2} = encoding;
-  const {x: _x, y: _y, ...encodingWithoutX_X2_Y_Y2} = encodingWithoutX2Y2;
-
-  if (!encoding.x2 && !encoding.y2) {
-    throw new Error('Neither x2 or y2 provided');
-  }
-
-  return {
-    ...outerSpec,
-    layer: [
-      {
-        mark: 'rule',
-        encoding: encodingWithoutSize
-      },{ // Lower tick
-        mark: 'tick',
-        encoding: encodingWithoutX2Y2
-      }, { // Upper tick
-        mark: 'tick',
-        encoding: encoding.x2 ? {
-          x: encoding.x2,
-          y: encoding.y,
-          ...encodingWithoutX_X2_Y_Y2
-        } : {
-          x: encoding.x,
-          y: encoding.y2,
-          ...encodingWithoutX_X2_Y_Y2
-        }
-      }
-    ]
-  };
-});
 
 export interface BoxPlotConfig extends MarkConfig {
   /** Size of the box and mid tick of a box plot */
