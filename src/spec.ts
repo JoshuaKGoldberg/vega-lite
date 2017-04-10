@@ -228,7 +228,7 @@ function normalizeNonFacetUnit(spec: GenericUnitSpec<string | MarkDef, Encoding>
 
     return spec; // Nothing to normalize
   } else {
-    return compositeMark.normalize(spec);
+    return compositeMark.normalize(spec, config);
   }
 }
 

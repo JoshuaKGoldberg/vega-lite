@@ -101,7 +101,7 @@ describe("normalizeBox", () => {
       normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "x": {"field": "people","type": "quantitative"},
           "y": {
@@ -116,12 +116,33 @@ describe("normalizeBox", () => {
     }, Error, 'Need one continuous and one discrete axis for 2D boxplots');
   });
 
+  it("should produce an error if continuous axis has aggregate property", () => {
+    assert.throws(() => {
+      normalize({
+        "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
+        "data": {"url": "data/population.json"},
+        mark: "box-plot",
+        encoding: {
+          "x": {"field": "age","type": "ordinal"},
+          "y": {
+            "aggregate": "min",
+            "field": "people",
+            "type": "quantitative",
+            "axis": {"title": "population"}
+          },
+          "size": {"value": 5},
+          "color": {"value" : "skyblue"}
+        }
+      });
+    }, Error, 'Continuous axis should not be aggregate');
+  });
+
   it("should produce an error if build 1D boxplot with a discrete axis", () => {
     assert.throws(() => {
       normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "x": {"field": "age", "type": "ordinal"}
         }
@@ -134,7 +155,7 @@ describe("normalizeBox", () => {
       normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "x": {"field": "age","type": "ordinal"},
           "y": {
@@ -153,7 +174,7 @@ describe("normalizeBox", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "x": {"field": "age","type": "ordinal"},
           "y": {
@@ -240,7 +261,7 @@ describe("normalizeBox", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "y": {"field": "age","type": "ordinal"},
           "x": {
@@ -327,7 +348,7 @@ describe("normalizeBox", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "y": {"field": "age","type": "ordinal"},
           "x": {
@@ -409,7 +430,7 @@ describe("normalizeBox", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "x": {
             "field": "people",
@@ -486,7 +507,7 @@ describe("normalizeBox", () => {
      assert.deepEqual(normalize({
         "description": "A box plot showing median, min, and max in the US population distribution of age groups in 2000.",
         "data": {"url": "data/population.json"},
-        mark: "box",
+        mark: "box-plot",
         encoding: {
           "y": {
             "field": "people",

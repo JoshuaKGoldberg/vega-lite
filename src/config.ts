@@ -1,4 +1,5 @@
 import {AxisConfig} from './axis';
+import {BoxPlotConfig} from './compositemark';
 import {defaultLegendConfig, LegendConfig} from './legend';
 import {BarConfig, MarkConfig, TextConfig, TickConfig} from './mark';
 import * as mark from './mark';
@@ -160,6 +161,13 @@ export interface Config  extends TopLevelProperties {
 
   /** Tick-Specific Config */
   tick?: TickConfig;
+
+  /** Box Config */
+  box?: BoxPlotConfig;
+
+  boxWhisker?: MarkConfig;
+
+  boxMid?: MarkConfig;
 
   // OTHER CONFIG
 

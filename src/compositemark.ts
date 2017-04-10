@@ -1,14 +1,15 @@
+import {Config} from './config';
 import {Encoding} from './encoding';
 import {isContinuous, isDiscrete, PositionFieldDef} from './fielddef';
-import {isMarkDef, MarkDef} from './mark';
+import {isMarkDef, MarkConfig, MarkDef} from './mark';
 import {GenericUnitSpec, LayerSpec} from './spec';
 
 export const ERRORBAR: 'error-bar' = 'error-bar';
 export type ERRORBAR = typeof ERRORBAR;
-export const BOX: 'box' = 'box';
+export const BOX: 'box-plot' = 'box-plot';
 export type BOX = typeof BOX;
 
-export type UnitNormalizer = (spec: GenericUnitSpec<any, any>)=> LayerSpec;
+export type UnitNormalizer = (spec: GenericUnitSpec<any, any>, config: Config)=> LayerSpec;
 
 /**
  * Registry index for all composite mark's normalizer
@@ -28,13 +29,14 @@ export function remove(mark: string) {
  */
 export function normalize(
     // This GenericUnitSpec has any as Encoding because unit specs with composite mark can have additional encoding channels.
-    spec: GenericUnitSpec<string | MarkDef, any>
+    spec: GenericUnitSpec<string | MarkDef, any>,
+    config: Config
   ): LayerSpec {
 
   const mark = isMarkDef(spec.mark) ? spec.mark.type : spec.mark;
   const normalizer = normalizerRegistry[mark];
   if (normalizer) {
-    return normalizer(spec);
+    return normalizer(spec, config);
   }
 
   throw new Error(`Unregistered composite mark ${mark}`);
@@ -77,6 +79,11 @@ add(ERRORBAR, (spec: GenericUnitSpec<ERRORBAR, Encoding>): LayerSpec => {
   };
 });
 
+export interface BoxPlotConfig extends MarkConfig {
+  /** Size of the box and mid tick of a box plot */
+  size?: number;
+}
+
 add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
   const {mark: _m, encoding: encoding, ...outerSpec} = spec;
   const {x: _x, y: _y, ...nonPositionEncoding} = encoding;
@@ -115,6 +122,10 @@ add(BOX, (spec: GenericUnitSpec<BOX, Encoding>): LayerSpec => {
     continuousAxisChannelDef = encoding.y;
   } else {
     throw new Error('Need a continuous axis for 1D boxplots');
+  }
+
+  if (continuousAxisChannelDef.aggregate !== undefined) {
+    throw new Error('Continuous axis should not be aggregated');
   }
 
   const baseContinuousFieldDef = {
