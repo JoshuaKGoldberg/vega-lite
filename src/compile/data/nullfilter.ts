@@ -1,6 +1,6 @@
- import {FieldDef} from '../../fielddef';
+import {FieldDef} from '../../fielddef';
 import {QUANTITATIVE, TEMPORAL} from '../../type';
-import { contains, Dict, keys, extend, differ, hash, differArray } from '../../util';
+import { contains, Dict, differ, differArray, extend, hash, keys } from '../../util';
 import {VgFilterTransform} from '../../vega.schema';
 import {Model} from './../model';
 import {DataFlowNode} from './dataflow';

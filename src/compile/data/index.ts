@@ -3,6 +3,8 @@ import {TimeUnitNode} from './timeunit';
 import { VgData } from '../../vega.schema';
 
 import {COLUMN, ROW} from '../../channel';
+import { MAIN, RAW } from '../../data';
+import { field } from '../../fielddef';
 import {Dict, every, vals} from '../../util';
 import { FacetModel } from '../facet';
 import {Model} from '../model';
@@ -14,12 +16,10 @@ import { FacetAggregateNode, FacetNode } from './facet';
 import {ParseNode} from './formatparse';
 import {NonPositiveFilterNode} from './nonpositivefilter';
 import { NullFilterNode } from './nullfilter';
+import { OrderNode } from './pathorder';
 import { SourceNode } from './source';
 import {StackNode} from './stack';
 import { CalculateNode, FilterNode, parseTransformArray } from './transforms';
-import { MAIN, RAW } from '../../data';
-import { OrderNode } from './pathorder';
-import { field } from '../../fielddef';
 
 export interface DataComponent {
   /**

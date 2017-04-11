@@ -1,4 +1,4 @@
- import {DataFormat, isInlineData, isNamedData, isUrlData} from '../../data';
+import {DataFormat, isInlineData, isNamedData, isUrlData} from '../../data';
 import {contains, hash} from '../../util';
 import {VgData} from '../../vega.schema';
 import {Model} from './../model';
@@ -12,7 +12,7 @@ export class SourceNode extends DataFlowNode {
   constructor(model: Model) {
     super();
 
-    let data = model.data;
+    const data = model.data;
 
     if (isInlineData(data)) {
       this._data = {

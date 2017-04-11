@@ -202,7 +202,7 @@ export class LayerModel extends Model {
       return assembleData(vals(this.component.data.sources));
     }
     return [];
-  };
+  }
 
   public assembleScales(): VgScale[] {
     // combine with scales from children

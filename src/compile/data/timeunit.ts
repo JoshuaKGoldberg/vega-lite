@@ -1,13 +1,11 @@
-
-
- import {field, FieldDef} from '../../fielddef';
+import {field, FieldDef} from '../../fielddef';
 import { fieldExpr, TimeUnit } from '../../timeunit';
 import {TEMPORAL} from '../../type';
-import {Dict, vals, extend} from '../../util';
+import {Dict, extend, vals} from '../../util';
 import {VgFormulaTransform} from '../../vega.schema';
+import { format } from '../axis/rules';
 import {Model} from '../model';
 import {DataFlowNode} from './dataflow';
-import { format } from '../axis/rules';
 
 export class TimeUnitNode extends DataFlowNode {
   private formula: Dict<VgFormulaTransform>;

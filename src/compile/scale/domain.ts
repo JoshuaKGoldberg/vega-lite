@@ -20,9 +20,9 @@ import {
   VgSortField
 } from '../../vega.schema';
 
+import { MAIN, RAW } from '../../data';
 import {varName} from '../../util';
 import {Model} from '../model';
-import { MAIN, RAW } from '../../data';
 
 export function initDomain(domain: Domain, fieldDef: FieldDef, scale: ScaleType, scaleConfig: ScaleConfig) {
   if (domain === 'unaggregated') {

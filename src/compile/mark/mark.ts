@@ -12,9 +12,9 @@ import {rule} from './rule';
 import {text} from './text';
 import {tick} from './tick';
 
+import { MAIN } from '../../data';
 import {FacetModel} from '../facet';
 import {UnitModel} from '../unit';
-import { MAIN } from '../../data';
 
 const markCompiler: {[type: string]: MarkCompiler} = {
   area: area,

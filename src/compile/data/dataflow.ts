@@ -11,7 +11,7 @@ export class DataFlowNode {
   constructor(public readonly debugName?: string) {
     this._children = [];
     this._parent = null;
-  };
+  }
 
   get parent() {
     return this._parent;

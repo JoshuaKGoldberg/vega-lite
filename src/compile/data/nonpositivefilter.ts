@@ -1,4 +1,4 @@
- import {ScaleType} from '../../scale';
+import {ScaleType} from '../../scale';
 import {Dict, keys} from '../../util';
 import {VgFilterTransform, VgTransform} from '../../vega.schema';
 import {Model} from './../model';

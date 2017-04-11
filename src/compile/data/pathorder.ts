@@ -1,5 +1,3 @@
-
-
 import {isAggregate} from '../../encoding';
 import {field} from '../../fielddef';
 import {isSortField} from '../../sort';

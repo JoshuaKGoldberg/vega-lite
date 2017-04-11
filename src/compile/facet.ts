@@ -18,10 +18,10 @@ import {buildModel} from './common';
 import {assembleLayout, parseFacetLayout} from './layout';
 import {Model} from './model';
 
-import { assembleData, parseData, assembleFacetData } from './data/index';
+import { COLUMN_SUMMARY, MAIN, ROW_SUMMARY } from '../data';
+import { assembleData, assembleFacetData, parseData } from './data/index';
 import initScale from './scale/init';
 import parseScaleComponent from './scale/parse';
-import { MAIN, COLUMN_SUMMARY, ROW_SUMMARY } from '../data';
 
 
 export class FacetModel extends Model {
@@ -249,7 +249,7 @@ export class FacetModel extends Model {
     data = data.concat(assembleFacetData(this.component.data.facetRoot));
 
     return data;
-  };
+  }
 
   public assembleParentGroupProperties(): any {
     return null;

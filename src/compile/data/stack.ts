@@ -1,13 +1,12 @@
-
- import {field} from '../../fielddef';
+import {field} from '../../fielddef';
 import {hasDiscreteDomain} from '../../scale';
 import {StackOffset} from '../../stack';
 import {contains} from '../../util';
 import {VgSort, VgTransform} from '../../vega.schema';
 import {sortParams} from '../common';
+import { Model } from '../model';
 import {UnitModel} from './../unit';
 import {DataFlowNode} from './dataflow';
-import { Model } from '../model';
 
 function getStackByFields(model: Model) {
   return model.stack.stackBy.reduce((fields, by) => {
@@ -109,7 +108,7 @@ export class StackNode extends DataFlowNode {
   }
 
   public assemble(): VgTransform[] {
-    let transform: VgTransform[] = [];
+    const transform: VgTransform[] = [];
 
     const stack = this._stack;
 

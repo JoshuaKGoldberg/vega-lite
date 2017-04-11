@@ -252,7 +252,7 @@ export class UnitModel extends Model {
       return assembleData(vals(this.component.data.sources));
     }
     return [];
-  };
+  }
 
   public assembleSignals(signals: any[]): any[] {
     return assembleUnitSignals(this, signals);

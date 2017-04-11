@@ -1,6 +1,5 @@
-
 import {field, FieldDef} from '../../fielddef';
-import { Dict, keys, StringSet, extend, differ } from '../../util';
+import { Dict, differ, extend, keys, StringSet } from '../../util';
 import {VgAggregateTransform} from '../../vega.schema';
 import {Model} from './../model';
 import {DataFlowNode} from './dataflow';
@@ -73,7 +72,7 @@ export class AggregateNode extends DataFlowNode {
         }
       } else {
         addDimension(dims, fieldDef);
-      };
+      }
     });
   }
 
@@ -95,8 +94,8 @@ export class AggregateNode extends DataFlowNode {
   }
 
   public assemble(): VgAggregateTransform {
-    let ops: string[] = [];
-    let fields: string[] = [];
+    lconstops: string[] = [];
+    lconstfields: string[] = [];
     keys(this.measures).forEach(field => {
       keys(this.measures[field]).forEach(op => {
         ops.push(op);
@@ -110,5 +109,5 @@ export class AggregateNode extends DataFlowNode {
       ops,
       fields
     };
-  };
+  }
 }

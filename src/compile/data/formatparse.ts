@@ -5,7 +5,7 @@ import {isEqualFilter, isOneOfFilter, isRangeFilter} from '../../filter';
 import {QUANTITATIVE, TEMPORAL} from '../../type';
 import {Dict, extend, isArray, isNumber, isString, keys} from '../../util';
 
- import {CalculateTransform, FilterTransform, isCalculate, isFilter} from '../../transform';
+import {CalculateTransform, FilterTransform, isCalculate, isFilter} from '../../transform';
 import {Model} from './../model';
 import {DataFlowNode} from './dataflow';
 

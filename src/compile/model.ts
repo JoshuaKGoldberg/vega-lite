@@ -1,7 +1,7 @@
 import {Axis} from '../axis';
 import {Channel, COLUMN, X} from '../channel';
 import {CellConfig, Config} from '../config';
-import { Data, DataSourceType, LAYOUT, MAIN, RAW, ROW_SUMMARY, COLUMN_SUMMARY } from '../data';
+import { COLUMN_SUMMARY, Data, DataSourceType, LAYOUT, MAIN, RAW, ROW_SUMMARY } from '../data';
 import {forEach, reduce} from '../encoding';
 import {ChannelDef, field, FieldDef, FieldRefOption, isFieldDef} from '../fielddef';
 import {Legend} from '../legend';
